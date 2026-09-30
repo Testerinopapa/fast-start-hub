@@ -9,8 +9,13 @@
     "noEmit": true,
     "skipLibCheck": true,
     "strict": false,
-    "baseUrl": ".",
-    "paths": { "@/*": ["src/*"] }
+    "paths": {
+      "@/*": [
+        "src/*"
+      ]
+    }
   },
-  "include": ["src"]
+  "include": [
+    "src"
+  ]
 }
