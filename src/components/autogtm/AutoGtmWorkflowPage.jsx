@@ -8,6 +8,7 @@ import Step1CompanyCard from './Step1CompanyCard';
 import CompetitorSkeletonCard from './CompetitorSkeletonCard';
 import Step2CompetitorsCard from './Step2CompetitorsCard';
 import Step3CampaignsGrid from './Step3CampaignsGrid';
+import TableSkeleton from './TableSkeleton';
 import Step4CompaniesTable from './Step4CompaniesTable';
 import PeopleSkeleton from './PeopleSkeleton';
 import Step5PeopleTable from './Step5PeopleTable';
@@ -74,18 +75,27 @@ export default function AutoGtmWorkflowPage({ domain = 'keethub.lovable.app' }) 
   const discoveryCampaigns = campaignPlan?.campaigns || [];
   const discoveryCampaignId = discoveryCampaigns.some(c => c.id === chosenCampaignId) ? chosenCampaignId
     : campaignPlan?.selected_ids[0] || discoveryCampaigns[0]?.id || '';
+  const discoveryEnabled = campaignsReady && Boolean(discoveryCampaignId) && !savingCampaigns && !campaignError && PHASES.indexOf(selectedPhase) >= 6;
   const discovery = useCompanyDiscovery(research?.job.id, research?.project.id, session?.user.id, discoveryCampaignId,
-    campaignsCanContinue && PHASES.indexOf(selectedPhase) >= 6);
+    discoveryEnabled);
   const discoveryRunning = Boolean(discovery.state && !discovery.state.criteria_changed && ['searching', 'researching'].includes(discovery.state.status));
   const companyInputs = discovery.inputs.filter(input => discoveryCampaigns.some(c => c.id === input.campaign_id));
-  const companiesCanContinue = discovery.ready && companyInputs.length > 0 && !discovery.busy && !discoveryRunning && !discovery.error;
+  const companiesCanContinue = discovery.ready && discovery.state?.status === 'completed' && !discovery.state.criteria_changed &&
+    discovery.state.saved.length > 0 && !discovery.busy && !discovery.error;
   // Saved phase links and manual controls wait for real results and a saved selection.
   const phase = !researchReady ? 'research_company_loading'
     : competitorEnabled && !competitorsReady ? 'research_competitors_loading'
     : campaignsEnabled && !campaignsReady ? 'research_segments_loading'
     : campaignsEnabled && PHASES.indexOf(selectedPhase) > 5 && !campaignsCanContinue ? 'research_segments'
     : PHASES.indexOf(selectedPhase) > 7 && !companiesCanContinue ? 'outreach_companies'
-    : selectedPhase === 'outreach_companies_loading' ? 'outreach_companies' : selectedPhase;
+    : selectedPhase;
+  const [discoveryAnimationReady, setDiscoveryAnimationReady] = useState(false);
+  useEffect(() => {
+    setDiscoveryAnimationReady(false);
+    if (!discoveryEnabled) return;
+    const timer = setTimeout(() => setDiscoveryAnimationReady(true), 4400);
+    return () => clearTimeout(timer);
+  }, [discoveryEnabled, discoveryCampaignId]);
   const [campaignAnimationReady, setCampaignAnimationReady] = useState(false);
   useEffect(() => {
     if (!campaignsEnabled) { setCampaignAnimationReady(false); return; }
@@ -108,6 +118,13 @@ export default function AutoGtmWorkflowPage({ domain = 'keethub.lovable.app' }) 
   const [editingCampaign, setEditingCampaign] = useState(null);
   const [isTrialModalOpen, setIsTrialModalOpen] = useState(false);
   const [isAutoPlay, setIsAutoPlay] = useState(true);
+  useEffect(() => {
+    // Older saved plans can have no selection. Persist the first researched
+    // campaign so the automatic flow never depends on a checkbox click.
+    if (!isAutoPlay || !campaignsEnabled || !campaignPlan?.campaigns.length ||
+        campaignPlan.selected_ids.length || savingCampaigns || campaignError || editingCampaign) return;
+    changeCampaigns('select', { selected_ids: [campaignPlan.campaigns[0].id] });
+  }, [isAutoPlay, campaignsEnabled, research?.job.id, campaignPlan?.version, savingCampaigns, campaignError, editingCampaign]);
   const selectDiscoveryCampaign = id => {
     setChosenCampaignId(id);
     setIsAutoPlay(true);
@@ -121,7 +138,6 @@ export default function AutoGtmWorkflowPage({ domain = 'keethub.lovable.app' }) 
   const selectCampaign = (segment) => {
     if (!campaignPlan || savingCampaigns) return;
     setActiveSegment(segment);
-    setIsAutoPlay(false);
     const selected_ids = campaignPlan.selected_ids.includes(segment.id)
       ? campaignPlan.selected_ids.filter(id => id !== segment.id) : [...campaignPlan.selected_ids, segment.id];
     changeCampaigns('select', { selected_ids });
@@ -140,7 +156,7 @@ export default function AutoGtmWorkflowPage({ domain = 'keethub.lovable.app' }) 
     else if (!campaignsReady && PHASES.indexOf(nextPhase) > 4) nextPhase = 'research_segments_loading';
     else if (!campaignsCanContinue && PHASES.indexOf(nextPhase) > 5) nextPhase = 'research_segments';
     else if (!companiesCanContinue && PHASES.indexOf(nextPhase) > 7) nextPhase = 'outreach_companies';
-    if (userTriggered) setIsAutoPlay(nextPhase.startsWith('outreach_companies'));
+    if (userTriggered) setIsAutoPlay(nextPhase.startsWith('research_segments') || nextPhase.startsWith('outreach_companies'));
     setPhase(nextPhase);
 
     if (typeof window !== 'undefined') {
@@ -179,6 +195,16 @@ export default function AutoGtmWorkflowPage({ domain = 'keethub.lovable.app' }) 
 
   // Auto progression timers for loading phases
   useEffect(() => {
+    // Reveal real results after the original loading animation. Errors reveal
+    // the existing recovery controls immediately, even when auto-play is paused.
+    if (phase === 'outreach_companies_loading') {
+      if (discovery.error || discovery.state?.status === 'failed' || (discovery.state?.criteria_changed && discovery.state.run >= 3) ||
+          (discoveryAnimationReady && discovery.ready && discovery.state?.status === 'completed' && !discovery.state.criteria_changed)) {
+        const reveal = setTimeout(() => changePhase('outreach_companies'), 0);
+        return () => clearTimeout(reveal);
+      }
+      return;
+    }
     // Manual continuation from real company results still completes the existing
     // loading animation even when the user has paused workflow auto-play.
     if (phase === 'outreach_people_loading' && companiesCanContinue) {
@@ -202,7 +228,10 @@ export default function AutoGtmWorkflowPage({ domain = 'keethub.lovable.app' }) 
       timer = setTimeout(() => changePhase('research_segments_loading'), 3500);
     } else if (phase === 'research_segments_loading') {
       if (campaignsReady && campaignAnimationReady) timer = setTimeout(() => changePhase('research_segments'), 0);
-      // Phase 3 waits for the user to review/select campaigns before Phase 4.
+    } else if (phase === 'research_segments') {
+      // Preserve the original viewing delay, then discover companies using the
+      // saved campaign selection without requiring Continue or Find clicks.
+      if (campaignsCanContinue && !editingCampaign) timer = setTimeout(() => changePhase('outreach_companies_loading'), 3500);
     } else if (phase === 'outreach_companies') {
       // Keep the original result-viewing pause, then continue only after this
       // campaign's real companies have been saved by the automatic discovery flow.
@@ -221,8 +250,8 @@ export default function AutoGtmWorkflowPage({ domain = 'keethub.lovable.app' }) 
     }
 
     return () => clearTimeout(timer);
-  }, [phase, isAutoPlay, researchReady, companyAnimationReady, competitorsReady, competitorAnimationReady, campaignsReady, campaignAnimationReady, companiesCanContinue,
-    discoveryCampaignId, discovery.state?.version, discovery.state?.criteria_changed]);
+  }, [phase, isAutoPlay, researchReady, companyAnimationReady, competitorsReady, competitorAnimationReady, campaignsReady, campaignsCanContinue, campaignAnimationReady, editingCampaign, companiesCanContinue,
+    discoveryCampaignId, discoveryAnimationReady, discovery.ready, discovery.error, discovery.state?.status, discovery.state?.version, discovery.state?.criteria_changed]);
 
   // Jump to a step when clicked on the rail
   const handleStepClick = (step) => {
@@ -465,8 +494,10 @@ export default function AutoGtmWorkflowPage({ domain = 'keethub.lovable.app' }) 
               if (await changeCampaigns(editingCampaign.isNew ? 'create' : 'update', { campaign_id: editingCampaign.id, campaign })) setEditingCampaign(null);
             }} />}
 
-          {/* Phase 4 retains its table and skeleton while using persisted discovery. */}
-          {['outreach_companies_loading', 'outreach_companies'].includes(phase) && (
+          {/* Original Phase 4 loading presentation while real discovery runs. */}
+          {phase === 'outreach_companies_loading' && <TableSkeleton />}
+
+          {phase === 'outreach_companies' && (
             <Step4CompaniesTable
               campaigns={discoveryCampaigns}
               campaignId={discoveryCampaignId}
