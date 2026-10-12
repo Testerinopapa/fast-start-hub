@@ -88,9 +88,9 @@ export function normalizeSegments(raw) {
         negativeCriteria: [],
         keywords: [],
         exampleClients: [],
-        percentage: 15,
-        estimatedCompanies: 5000,
-        count: '5.0K',
+        percentage: null,
+        estimatedCompanies: null,
+        count: '—',
       };
     }
 
@@ -106,7 +106,7 @@ export function normalizeSegments(raw) {
       } else if (seg.percentage) {
         countDisplay = `${seg.percentage}%`;
       } else {
-        countDisplay = '5.0K';
+        countDisplay = '—';
       }
     }
 
@@ -127,9 +127,9 @@ export function normalizeSegments(raw) {
       dataSource: seg.dataSource,
       sourceUrls: toSafeArray(seg.sourceUrls),
       selected: seg.selected,
-      percentage: seg.dataSource === 'research' ? null : Number(seg.percentage) || 15,
+      percentage: seg.dataSource === 'research' ? null : Number(seg.percentage) || null,
       estimatedCompanies:
-        seg.dataSource === 'research' ? null : Number(seg.estimatedCompanies || seg.estimated_companies) || 5000,
+        seg.dataSource === 'research' ? null : Number(seg.estimatedCompanies || seg.estimated_companies) || null,
       count: seg.dataSource === 'research' ? '—' : countDisplay,
       buyerType: seg.buyerType || seg.buyer_type || 'company',
       decisionMaker: seg.decisionMaker || seg.decision_maker || '',

@@ -13,7 +13,7 @@ export default function Step3CampaignsGrid({
   selectedIds = null, onCreate = null, onEdit = null, onDelete = null,
   busy = false, error = null, canContinue = true,
 }) {
-  const displaySegments = normalizeSegments(segments);
+  const displaySegments = normalizeSegments(segments).filter(segment => segment.dataSource === 'research');
 
   return (
     <div className="w-full max-w-4xl mx-auto mt-6 space-y-4 animate-card-enter">
@@ -117,7 +117,7 @@ export default function Step3CampaignsGrid({
                     />
                     <path
                       className="text-gray-500"
-                      strokeDasharray={`${seg.dataSource === 'research' ? 0 : seg.percentage || seg.percent || 20}, 100`}
+                      strokeDasharray={`${seg.percentage ?? 0}, 100`}
                       strokeWidth="3.5"
                       strokeLinecap="round"
                       stroke="currentColor"
@@ -126,7 +126,7 @@ export default function Step3CampaignsGrid({
                     />
                   </svg>
                   <span className="absolute text-[10px] font-mono font-semibold text-gray-600">
-                    {seg.count || `${seg.percentage || 10}K`}
+                    {seg.count || '—'}
                   </span>
                 </div>
               </div>

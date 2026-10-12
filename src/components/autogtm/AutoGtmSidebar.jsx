@@ -30,7 +30,7 @@ export default function AutoGtmSidebar({
 
   // 2. Guarantee normalized array contracts
   const normalizedCampaigns = normalizeSegments(rawCampaignSource);
-  const campaigns = normalizedCampaigns;
+  const campaigns = normalizedCampaigns.filter(campaign => campaign.dataSource === 'research');
 
   const normalizedCompetitors = normalizeCompetitors(rawCompetitorSource);
   const competitors = normalizedCompetitors;
@@ -348,7 +348,7 @@ export default function AutoGtmSidebar({
                               </svg>
                             )}
                             <span className="text-[11px] text-gray-500 font-mono">
-                              {seg.count || `${seg.percentage || 10}%`}
+                              {seg.count || '—'}
                             </span>
                           </div>
                         </button>

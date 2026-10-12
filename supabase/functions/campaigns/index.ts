@@ -1,5 +1,5 @@
 import { adminClient, authenticate, endpoint, json, readBody, type Admin } from '../_shared/backend.ts';
-import { campaignFields, campaignTargets, generateCampaigns, type Campaign, type CampaignPlan, type CampaignProfile } from '../_shared/campaigns-core.ts';
+import { campaignFields, campaignTargets, generateCampaigns, withoutCampaignTemplates, type Campaign, type CampaignPlan, type CampaignProfile } from '../_shared/campaigns-core.ts';
 import { isUuid, ResearchError } from '../_shared/research-core.ts';
 
 async function save(db: Admin, profile: CampaignProfile, version: number, plan: CampaignPlan) {
@@ -22,6 +22,10 @@ export const handler = endpoint(async (req) => {
   if (profile.competitor_research?.status !== 'completed') throw new ResearchError('RESEARCH_PENDING', 'Finish competitor research before defining campaigns.', 409);
   let plan = profile.campaign_plan;
   if (!plan) plan = (await save(db, profile, 0, generateCampaigns(profile))).plan;
+  const cleaned = withoutCampaignTemplates(plan);
+  if (cleaned.campaigns.length !== plan.campaigns.length) {
+    plan = withoutCampaignTemplates((await save(db, profile, plan.version, cleaned)).plan);
+  }
   if (action !== 'load') {
     if (!Number.isInteger(body.version) || body.version !== plan.version) throw new ResearchError('CONFLICT', 'Campaigns changed in another tab. Reload the latest plan before saving.', 409);
     let campaigns = plan.campaigns;

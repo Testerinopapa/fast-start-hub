@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { campaignRequest } from '../lib/companyResearch';
+import { withoutCampaignTemplates } from '../lib/campaigns';
 
 export default function useCampaigns(jobId, projectId, userId, enabled) {
   const key = `${userId || ''}:${projectId || ''}:${jobId || ''}`;
@@ -15,7 +16,9 @@ export default function useCampaigns(jobId, projectId, userId, enabled) {
         !Array.isArray(result?.plan?.selected_ids) || !Array.isArray(result?.targets)) {
       throw new Error('The saved campaigns do not match this project.');
     }
-    if (currentKey.current === key) setSnapshot(previous => previous?.key === key && previous.plan.version > result.plan.version ? previous : { key, ...result });
+    const plan = withoutCampaignTemplates(result.plan);
+    const targets = result.targets.filter(target => plan.selected_ids.includes(target.campaign_id));
+    if (currentKey.current === key) setSnapshot(previous => previous?.key === key && previous.plan.version > result.plan.version ? previous : { key, ...result, plan, targets });
   };
   useEffect(() => {
     if (!enabled || !jobId || !userId) return;

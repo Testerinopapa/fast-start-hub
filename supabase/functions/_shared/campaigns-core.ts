@@ -37,41 +37,29 @@ export function campaignFields(input: unknown): Omit<Campaign, 'id' | 'origin' |
     reasoning: string('reasoning', 600, false) };
 }
 
-// Local, evidence-led suggestions: no new crawl, LLM service, invented leads or
-// market estimates. Adjacent audiences are explicitly hypotheses to review.
+export function withoutCampaignTemplates(plan: CampaignPlan): CampaignPlan {
+  const campaigns = plan.campaigns.filter(campaign => !(campaign.origin === 'suggested' &&
+    campaign.reasoning.startsWith('Suggested fit: the researched offering includes ')));
+  return { ...plan, campaigns, selected_ids: plan.selected_ids.filter(id => campaigns.some(c => c.id === id)) };
+}
+
+// Generate only from audiences present in the saved research. No fixed segments.
 export function generateCampaigns(profile: CampaignProfile): CampaignPlan {
   const products = profile.products.filter(p => text(p.name));
   const offering = text(products[0]?.name, 100) || text(profile.business_description, 160);
   const productText = `${profile.business_description || ''} ${products.map(p => `${p.name} ${p.description || ''}`).join(' ')}`;
-  const customersText = profile.customers.map(c => `${c.name} ${c.description || ''}`).join(' ');
   const candidates: { audience: string; industry: string; rationale: string; sources: string[]; keywords: string[]; score: number }[] = [];
   const sourceUrls = unique(profile.source_urls).slice(0, 10);
   const add = (audience: string, industry: string, rationale: string, sources: string[], keywords: string[], score: number) => {
     if (audience && offering && sources.length) candidates.push({ audience: text(audience, 100), industry, rationale, sources, keywords, score });
   };
-  const languageLearning = /\b(english|esl|language)\b/i.test(productText) && /\b(learn\w*|teach\w*|tutor\w*|course\w*|education|vocabulary)\b/i.test(productText);
-  const language = /\b(english|esl)\b/i.test(productText) ? 'English' : 'language';
-  if (languageLearning) {
-    const groups = [
-      ['Language schools', 'Language education', `${language} language school`, 'structured language classes'],
-      [language === 'English' ? 'ESL teachers' : 'Language teachers', 'Education', `${language} teacher`, 'supplementary lesson practice'],
-      ['Private tutors', 'Tutoring', `${language} tutor`, 'individual language lessons'],
-      ['Educational institutions', 'Education', `${language} language program`, 'language programs'],
-    ];
-    if (/\b(business english|corporate|workplace|employee|professional development)\b/i.test(`${productText} ${customersText}`)) {
-      groups.push(['Corporate training providers', 'Professional training', `${language} corporate training`, 'workplace language training']);
-    }
-    for (const [audience, industry, keyword, use] of groups) add(audience, industry,
-      `Suggested fit: the researched offering includes ${offering}; ${audience.toLowerCase()} could evaluate it for ${use}. This is a targeting hypothesis, not a confirmed customer relationship.`,
-      sourceUrls, [keyword, text(offering, 80)], 3);
-  }
   // Prefer explicit business audiences over inferred adjacent audiences. Do not
   // silently turn consumer segments into businesses for the Find Companies stage.
   const consumer = /\b(students?|learners?|consumers?|parents?|children|families|individuals?|hobbyists?)\b/i;
   const organization = /\b(schools?|teachers?|tutors?|universit\w*|institut\w*|compan\w*|business\w*|teams?|agenc\w*|providers?|retailers?|manufactur\w*|clinics?|hospitals?|enterprises?|startups?|organizations?|firms?)\b/i;
   for (const audience of profile.customers) {
     if (consumer.test(audience.name) && !organization.test(audience.name)) continue;
-    add(audience.name, languageLearning ? 'Education' : '',
+    add(audience.name, '',
       `The company research explicitly describes ${text(`${audience.name}: ${audience.description || audience.name}`, 260)}. Proposed outreach should validate their need for ${offering}.`,
       audience.source_urls?.length ? audience.source_urls : sourceUrls, [text(audience.name, 80), text(offering, 80)], 5);
   }
@@ -81,7 +69,7 @@ export function generateCampaigns(profile: CampaignProfile): CampaignPlan {
       // Only carry over audiences connected by actual shared product vocabulary.
       const shared = unique(tokens(productText)).filter(word => tokens(`${competitor.description || ''} ${competitor.products.map(p => p.name).join(' ')}`).includes(word));
       if (shared.length < 2) continue;
-      add(audience.name, languageLearning ? 'Education' : '',
+      add(audience.name, '',
         `Adjacent audience observed at ${competitor.domain}, a researched competitor with overlapping products (${shared.slice(0, 4).join(', ')}). Validate whether ${offering} fits this audience; it is not a confirmed customer of ${profile.company_name || 'your company'}.`,
         unique([...sourceUrls, ...(audience.source_urls || competitor.source_urls)]), [text(audience.name, 80), text(offering, 80)], 2);
     }
@@ -103,7 +91,8 @@ export function generateCampaigns(profile: CampaignProfile): CampaignPlan {
 export function campaignTargets(profile: CampaignProfile, plan: CampaignPlan) {
   const excluded_domains = unique([...profile.source_urls, ...profile.competitor_research.results.flatMap(c => c.source_urls)]
     .flatMap(url => { try { return [businessDomain(url)]; } catch { return []; } }));
-  return plan.campaigns.filter(campaign => plan.selected_ids.includes(campaign.id)).map(campaign => ({
+  const saved = withoutCampaignTemplates(plan);
+  return saved.campaigns.filter(campaign => saved.selected_ids.includes(campaign.id)).map(campaign => ({
     campaign_id: campaign.id, project_id: profile.project_id, research_job_id: profile.job_id, plan_version: plan.version,
     name: campaign.name, audience: campaign.target_audience, industry: campaign.target_industry || null,
     ideal_customer: campaign.ideal_customer, keywords: campaign.keywords, locations: campaign.target_locations,
