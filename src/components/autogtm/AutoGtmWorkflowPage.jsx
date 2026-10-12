@@ -8,7 +8,6 @@ import Step1CompanyCard from './Step1CompanyCard';
 import CompetitorSkeletonCard from './CompetitorSkeletonCard';
 import Step2CompetitorsCard from './Step2CompetitorsCard';
 import Step3CampaignsGrid from './Step3CampaignsGrid';
-import TableSkeleton from './TableSkeleton';
 import Step4CompaniesTable from './Step4CompaniesTable';
 import PeopleSkeleton from './PeopleSkeleton';
 import Step5PeopleTable from './Step5PeopleTable';
@@ -21,6 +20,7 @@ import { normalizeSegments, normalizeCompetitors } from '../../lib/autogtmNormal
 import useCompanyResearch from '../../hooks/useCompanyResearch';
 import useCompetitorResearch from '../../hooks/useCompetitorResearch';
 import useCampaigns from '../../hooks/useCampaigns';
+import useCompanyDiscovery from '../../hooks/useCompanyDiscovery';
 import { campaignSegments } from '../../lib/campaigns';
 import CampaignEditor from './CampaignEditor';
 
@@ -70,11 +70,22 @@ export default function AutoGtmWorkflowPage({ domain = 'keethub.lovable.app' }) 
   );
   const campaignsReady = Boolean(campaignPlan);
   const campaignsCanContinue = campaignsReady && campaignTargets.length > 0 && !savingCampaigns && !campaignError;
+  const [chosenCampaignId, setChosenCampaignId] = useState(() => new URLSearchParams(window.location.search).get('campaign') || '');
+  const discoveryCampaigns = campaignPlan?.campaigns || [];
+  const discoveryCampaignId = discoveryCampaigns.some(c => c.id === chosenCampaignId) ? chosenCampaignId
+    : campaignPlan?.selected_ids[0] || discoveryCampaigns[0]?.id || '';
+  const discovery = useCompanyDiscovery(research?.job.id, research?.project.id, session?.user.id, discoveryCampaignId,
+    campaignsCanContinue && PHASES.indexOf(selectedPhase) >= 6);
+  const discoveryRunning = Boolean(discovery.state && !discovery.state.criteria_changed && ['searching', 'researching'].includes(discovery.state.status));
+  const companyInputs = discovery.inputs.filter(input => discoveryCampaigns.some(c => c.id === input.campaign_id));
+  const companiesCanContinue = discovery.ready && companyInputs.length > 0 && !discovery.busy && !discoveryRunning && !discovery.error;
   // Saved phase links and manual controls wait for real results and a saved selection.
   const phase = !researchReady ? 'research_company_loading'
     : competitorEnabled && !competitorsReady ? 'research_competitors_loading'
     : campaignsEnabled && !campaignsReady ? 'research_segments_loading'
-    : campaignsEnabled && PHASES.indexOf(selectedPhase) > 5 && !campaignsCanContinue ? 'research_segments' : selectedPhase;
+    : campaignsEnabled && PHASES.indexOf(selectedPhase) > 5 && !campaignsCanContinue ? 'research_segments'
+    : PHASES.indexOf(selectedPhase) > 7 && !companiesCanContinue ? 'outreach_companies'
+    : selectedPhase === 'outreach_companies_loading' ? 'outreach_companies' : selectedPhase;
   const [campaignAnimationReady, setCampaignAnimationReady] = useState(false);
   useEffect(() => {
     if (!campaignsEnabled) { setCampaignAnimationReady(false); return; }
@@ -97,6 +108,13 @@ export default function AutoGtmWorkflowPage({ domain = 'keethub.lovable.app' }) 
   const [editingCampaign, setEditingCampaign] = useState(null);
   const [isTrialModalOpen, setIsTrialModalOpen] = useState(false);
   const [isAutoPlay, setIsAutoPlay] = useState(true);
+  const selectDiscoveryCampaign = id => {
+    setChosenCampaignId(id);
+    setIsAutoPlay(false);
+    const url = new URL(window.location.href);
+    url.searchParams.set('campaign', id);
+    window.history.replaceState({}, '', url.toString());
+  };
 
   // Guarantee normalized data at boundary for all UI consumers
   const normalizedCampaigns = normalizeSegments(campaignSegments(campaignPlan));
@@ -121,6 +139,7 @@ export default function AutoGtmWorkflowPage({ domain = 'keethub.lovable.app' }) 
     if (!competitorsReady && PHASES.indexOf(nextPhase) > 2) nextPhase = 'research_competitors_loading';
     else if (!campaignsReady && PHASES.indexOf(nextPhase) > 4) nextPhase = 'research_segments_loading';
     else if (!campaignsCanContinue && PHASES.indexOf(nextPhase) > 5) nextPhase = 'research_segments';
+    else if (!companiesCanContinue && PHASES.indexOf(nextPhase) > 7) nextPhase = 'outreach_companies';
     if (userTriggered) setIsAutoPlay(false);
     setPhase(nextPhase);
 
@@ -154,12 +173,18 @@ export default function AutoGtmWorkflowPage({ domain = 'keethub.lovable.app' }) 
   if (currentStep > 1 || phase === 'research_company') completedSteps.push(1);
   if (currentStep > 2 || phase === 'research_competitors') completedSteps.push(2);
   if (currentStep > 3 || phase === 'research_segments') completedSteps.push(3);
-  if (currentStep > 4 || phase === 'outreach_companies') completedSteps.push(4);
+  if (companiesCanContinue) completedSteps.push(4);
   if (currentStep > 5 || phase === 'outreach_people') completedSteps.push(5);
   if (phase === 'outreach_emails' || phase === 'final') completedSteps.push(6);
 
   // Auto progression timers for loading phases
   useEffect(() => {
+    // Manual continuation from real company results still completes the existing
+    // loading animation even when the user has paused workflow auto-play.
+    if (phase === 'outreach_people_loading' && companiesCanContinue) {
+      const handoff = setTimeout(() => changePhase('outreach_people'), 4200);
+      return () => clearTimeout(handoff);
+    }
     if (!isAutoPlay) return;
 
     let timer;
@@ -178,10 +203,7 @@ export default function AutoGtmWorkflowPage({ domain = 'keethub.lovable.app' }) 
     } else if (phase === 'research_segments_loading') {
       if (campaignsReady && campaignAnimationReady) timer = setTimeout(() => changePhase('research_segments'), 0);
       // Phase 3 waits for the user to review/select campaigns before Phase 4.
-    } else if (phase === 'outreach_companies_loading') {
-      timer = setTimeout(() => changePhase('outreach_companies'), 4400);
-    } else if (phase === 'outreach_companies') {
-      timer = setTimeout(() => changePhase('outreach_people_loading'), 3500);
+      // Phase 4 waits for an explicit search and saved company selection.
     } else if (phase === 'outreach_people_loading') {
       timer = setTimeout(() => changePhase('outreach_people'), 4200);
     } else if (phase === 'outreach_people') {
@@ -193,7 +215,7 @@ export default function AutoGtmWorkflowPage({ domain = 'keethub.lovable.app' }) 
     }
 
     return () => clearTimeout(timer);
-  }, [phase, isAutoPlay, researchReady, companyAnimationReady, competitorsReady, competitorAnimationReady, campaignsReady, campaignAnimationReady]);
+  }, [phase, isAutoPlay, researchReady, companyAnimationReady, competitorsReady, competitorAnimationReady, campaignsReady, campaignAnimationReady, companiesCanContinue]);
 
   // Jump to a step when clicked on the rail
   const handleStepClick = (step) => {
@@ -226,8 +248,8 @@ export default function AutoGtmWorkflowPage({ domain = 'keethub.lovable.app' }) 
     ],
     4: [
       'building search queries from campaigns…',
-      'querying the company index — 312,000+ companies…',
-      'scoring fit for 1,284 domains…',
+      `searching ${discovery.state?.searches_used || 0} of ${discovery.state?.queries.length || 3} queries…`,
+      `checking ${discovery.state?.pages_attempted || 0} of ${discovery.state?.candidates_count || 0} candidate websites…`,
     ],
     5: [
       'identifying key decision makers…',
@@ -242,7 +264,7 @@ export default function AutoGtmWorkflowPage({ domain = 'keethub.lovable.app' }) 
     ],
   };
 
-  const isRunningPhase = phase.endsWith('_loading');
+  const isRunningPhase = phase.endsWith('_loading') || (currentStep === 4 && discoveryRunning && !discovery.state?.criteria_changed);
   const [subtaskIndex, setSubtaskIndex] = useState(0);
 
   useEffect(() => {
@@ -266,7 +288,7 @@ export default function AutoGtmWorkflowPage({ domain = 'keethub.lovable.app' }) 
   }, [phase, currentStep, isRunningPhase]);
 
   const currentStepTasks = WORKFLOW_STEP_TASKS[currentStep] || [];
-  const activeError = researchError || (currentStep === 2 ? competitorError : currentStep === 3 ? campaignError : null);
+  const activeError = researchError || (currentStep === 2 ? competitorError : currentStep === 3 ? campaignError : currentStep === 4 ? discovery.error : null);
   const currentAgentItems = activeError ? [{ label: activeError.message, status: 'active' }] : isRunningPhase
     ? currentStepTasks.slice(0, subtaskIndex + 1).map((task, idx) => ({
         label: task,
@@ -346,11 +368,13 @@ export default function AutoGtmWorkflowPage({ domain = 'keethub.lovable.app' }) 
                   return;
                 }
                 if (currentStep === 3 && campaignError) { retryCampaigns(); return; }
+                if (currentStep === 4 && discovery.error) { retryCampaigns(); discovery.reload(); return; }
                 const nextIdx = (PHASES.indexOf(phase) + 1) % PHASES.length;
                 changePhase(PHASES[nextIdx], true);
               }}
               disabled={(!researchReady && !researchError) || (currentStep === 2 && !competitorsReady && (!competitorError || competitorError.canRetry === false)) ||
-                (currentStep === 3 && (savingCampaigns || (!campaignError && (!campaignsReady || (phase === 'research_segments' && !campaignsCanContinue)))))}
+                (currentStep === 3 && (savingCampaigns || (!campaignError && (!campaignsReady || (phase === 'research_segments' && !campaignsCanContinue))))) ||
+                (currentStep === 4 && (discovery.busy || (!discovery.error && !companiesCanContinue)))}
               className="text-[11px] px-2.5 py-1 rounded-md bg-[#0d9467] text-white hover:bg-[#0a7854] transition shadow-2xs cursor-pointer"
             >
               {activeError ? (activeError.canRetry === false ? 'Research failed' : 'Retry research') : 'Next Phase →'}
@@ -434,15 +458,13 @@ export default function AutoGtmWorkflowPage({ domain = 'keethub.lovable.app' }) 
               if (await changeCampaigns(editingCampaign.isNew ? 'create' : 'update', { campaign_id: editingCampaign.id, campaign })) setEditingCampaign(null);
             }} />}
 
-          {/* Phase 7: outreach_companies_loading */}
-          {phase === 'outreach_companies_loading' && (
-            <TableSkeleton />
-          )}
-
-          {/* Phase 8: outreach_companies */}
-          {phase === 'outreach_companies' && (
+          {/* Phase 4 retains its table and skeleton while using persisted discovery. */}
+          {['outreach_companies_loading', 'outreach_companies'].includes(phase) && (
             <Step4CompaniesTable
-              campaignTargets={campaignTargets}
+              campaigns={discoveryCampaigns}
+              campaignId={discoveryCampaignId}
+              onCampaignChange={selectDiscoveryCampaign}
+              discovery={{ ...discovery, inputs: companyInputs, reload: () => { retryCampaigns(); discovery.reload(); } }}
               onNext={() => changePhase('outreach_people_loading', true)}
             />
           )}
