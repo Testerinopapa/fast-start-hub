@@ -110,7 +110,7 @@ export default function AutoGtmWorkflowPage({ domain = 'keethub.lovable.app' }) 
   const [isAutoPlay, setIsAutoPlay] = useState(true);
   const selectDiscoveryCampaign = id => {
     setChosenCampaignId(id);
-    setIsAutoPlay(false);
+    setIsAutoPlay(true);
     const url = new URL(window.location.href);
     url.searchParams.set('campaign', id);
     window.history.replaceState({}, '', url.toString());
@@ -140,7 +140,7 @@ export default function AutoGtmWorkflowPage({ domain = 'keethub.lovable.app' }) 
     else if (!campaignsReady && PHASES.indexOf(nextPhase) > 4) nextPhase = 'research_segments_loading';
     else if (!campaignsCanContinue && PHASES.indexOf(nextPhase) > 5) nextPhase = 'research_segments';
     else if (!companiesCanContinue && PHASES.indexOf(nextPhase) > 7) nextPhase = 'outreach_companies';
-    if (userTriggered) setIsAutoPlay(false);
+    if (userTriggered) setIsAutoPlay(nextPhase.startsWith('outreach_companies'));
     setPhase(nextPhase);
 
     if (typeof window !== 'undefined') {
@@ -203,7 +203,13 @@ export default function AutoGtmWorkflowPage({ domain = 'keethub.lovable.app' }) 
     } else if (phase === 'research_segments_loading') {
       if (campaignsReady && campaignAnimationReady) timer = setTimeout(() => changePhase('research_segments'), 0);
       // Phase 3 waits for the user to review/select campaigns before Phase 4.
-      // Phase 4 waits for an explicit search and saved company selection.
+    } else if (phase === 'outreach_companies') {
+      // Keep the original result-viewing pause, then continue only after this
+      // campaign's real companies have been saved by the automatic discovery flow.
+      if (companiesCanContinue && discovery.state?.status === 'completed' && !discovery.state.criteria_changed &&
+          discovery.state.results.some(company => discovery.state.saved.some(saved => saved.domain === company.domain))) {
+        timer = setTimeout(() => changePhase('outreach_people_loading'), 3500);
+      }
     } else if (phase === 'outreach_people_loading') {
       timer = setTimeout(() => changePhase('outreach_people'), 4200);
     } else if (phase === 'outreach_people') {
@@ -215,7 +221,8 @@ export default function AutoGtmWorkflowPage({ domain = 'keethub.lovable.app' }) 
     }
 
     return () => clearTimeout(timer);
-  }, [phase, isAutoPlay, researchReady, companyAnimationReady, competitorsReady, competitorAnimationReady, campaignsReady, campaignAnimationReady, companiesCanContinue]);
+  }, [phase, isAutoPlay, researchReady, companyAnimationReady, competitorsReady, competitorAnimationReady, campaignsReady, campaignAnimationReady, companiesCanContinue,
+    discoveryCampaignId, discovery.state?.version, discovery.state?.criteria_changed]);
 
   // Jump to a step when clicked on the rail
   const handleStepClick = (step) => {

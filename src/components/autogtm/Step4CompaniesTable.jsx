@@ -6,8 +6,9 @@ export default function Step4CompaniesTable({ campaigns = [], campaignId = '', o
   const [selected, setSelected] = useState([]);
   const [savedOnly, setSavedOnly] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const { state, ready, busy, error, mutate, reload, inputs } = discovery;
-  const running = state && !state.criteria_changed && ['searching', 'researching'].includes(state.status);
+  const { state, ready, busy, action, error, mutate, reload, inputs } = discovery;
+  const starting = ready && Boolean(campaignId) && !state && !error;
+  const running = starting || (state && !state.criteria_changed && ['searching', 'researching'].includes(state.status));
   const saved = new Set((state?.saved || []).map(row => row.domain));
   const rows = [...new Map([...(state?.results || []), ...(state?.saved || [])].map(row => [row.domain, row])).values()]
     .filter(row => !state?.removed_domains.includes(row.domain)).sort((a, b) => b.relevance_score - a.relevance_score);
@@ -19,11 +20,13 @@ export default function Step4CompaniesTable({ campaigns = [], campaignId = '', o
   const currentRows = filtered.slice((page - 1) * pageSize, page * pageSize);
   const locked = busy || Boolean(running);
   const selectedVisible = selected.filter(domain => rows.some(row => row.domain === domain));
-  const progress = !state ? '' : state.criteria_changed ? 'Search paused because campaign criteria changed.'
+  const progress = starting ? 'Starting company discovery for this campaign…'
+    : action === 'save' ? 'Saving verified companies…'
+    : !state ? '' : state.criteria_changed ? state.run >= 3 ? 'This campaign has reached its search limit.' : 'Starting a search with the updated campaign criteria…'
     : state.working && state.status === 'searching' ? `Searching ${state.searches_used} of ${state.queries.length} queries…`
     : state.status === 'searching' ? `Searched ${state.searches_used} of ${state.queries.length} queries…`
     : state.status === 'researching' ? `Checking website ${state.pages_attempted || 1} of ${state.candidates_count}…`
-    : state.status === 'completed' ? `${state.results.length} verified companies found.` : 'Discovery paused. Saved results are available.';
+    : state.status === 'completed' ? `${state.results.length} verified companies found · ${saved.size} saved.` : 'Discovery paused. Saved results are available.';
   useEffect(() => { setSelected([]); setSearch(''); setCurrentPage(1); setSavedOnly(false); }, [campaignId]);
   const changeSelection = domain => setSelected(values => values.includes(domain) ? values.filter(value => value !== domain) : [...values, domain]);
   const changeCompanies = async (action, domains) => { if (await mutate(action, { domains })) setSelected([]); };
@@ -40,20 +43,20 @@ export default function Step4CompaniesTable({ campaigns = [], campaignId = '', o
             {campaigns.map(campaign => <option key={campaign.id} value={campaign.id}>{campaign.name}</option>)}
           </select>
         </label>
-        <button type="button" disabled={!ready || !campaignId || busy || (!state?.criteria_changed && Boolean(state)) || (state?.criteria_changed && state.run >= 3)}
-          onClick={() => mutate('start')} className="px-3 py-2 rounded-md bg-[#0d9467] text-white text-xs font-semibold hover:bg-[#0a7854] disabled:opacity-40">
-          {state?.criteria_changed ? 'Search updated criteria' : running ? 'Finding companies…' : state ? 'Results loaded' : 'Find Companies'}
+        <button type="button" disabled={busy || !error}
+          onClick={reload} className="px-3 py-2 rounded-md bg-[#0d9467] text-white text-xs font-semibold hover:bg-[#0a7854] disabled:opacity-40">
+          {error ? 'Retry discovery' : running || (state?.criteria_changed && state.run < 3) ? 'Finding companies…' : !ready ? 'Loading companies…' : 'Results loaded'}
         </button>
         {state?.status === 'failed' && state.can_resume && !state.criteria_changed && <button type="button" className={button} disabled={busy} onClick={() => mutate('resume')}>Resume remaining search</button>}
         <button type="button" className={button} disabled={busy} onClick={reload}>Reload saved results</button>
       </div>
 
       {state?.criteria_changed && <p role="status" className="px-4 pt-3 text-xs text-amber-800">
-        Campaign criteria changed. These results belong to the previous criteria; a new search keeps your saved companies.
+        Campaign criteria changed. These results belong to the previous criteria; the updated search keeps your saved companies.
         {state.run >= 3 && ' This campaign has reached its three-run limit.'}
       </p>}
       {(error || state?.error) && <p role="alert" className="px-4 pt-3 text-xs text-red-700">{error?.message || state.error}</p>}
-      {state && <p role="status" aria-live="polite" className="px-4 pt-3 text-xs text-gray-500">{progress}</p>}
+      {progress && <p role="status" aria-live="polite" className="px-4 pt-3 text-xs text-gray-500">{progress}</p>}
 
       {!ready && !error && <TableSkeleton />}
       {ready && <>
@@ -66,8 +69,8 @@ export default function Step4CompaniesTable({ campaigns = [], campaignId = '', o
           <button type="button" className={button} disabled={locked || !selectedVisible.length} onClick={() => changeCompanies('save', selectedVisible)}>Save selected ({selectedVisible.length})</button>
           <button type="button" className={button} disabled={locked || !selectedVisible.length} onClick={() => changeCompanies('remove', selectedVisible)}>Remove selected</button>
         </div>
-        {running && !state.criteria_changed && !rows.length && !error && <TableSkeleton />}
-        {(!running || rows.length > 0 || state.criteria_changed || error) && <div className="overflow-x-auto">
+        {running && !state?.criteria_changed && !rows.length && !error && <TableSkeleton />}
+        {(!running || rows.length > 0 || state?.criteria_changed || error) && <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead><tr className="border-b border-black/[0.08] bg-[#fafafa] text-gray-500 font-semibold text-[11px] uppercase tracking-wider">
               <th className="py-3 pl-4"><input type="checkbox" aria-label="Select all companies on this page" disabled={locked || !currentRows.length}
@@ -105,7 +108,10 @@ export default function Step4CompaniesTable({ campaigns = [], campaignId = '', o
                 </div></td>
               </tr>)}
               {!currentRows.length && <tr><td colSpan={7} className="px-4 py-10 text-center text-sm text-gray-500">
-                {!state ? 'Select a campaign and click Find Companies.' : rows.length ? 'No companies match this filter.' : state.status === 'completed' ? 'No verified matching companies were found. Refine the campaign criteria to try a different search.' : 'No verified companies are available yet.'}
+                {error ? error.message : !campaignId ? 'No saved campaign is available for company discovery.' : !state ? 'Loading company discovery…' : rows.length ? 'No companies match this filter.'
+                  : state.status === 'completed' ? !state.candidates_count ? 'No company websites were found for the saved campaign audience, industry, and keywords.'
+                    : state.warnings.length ? 'The researched websites did not provide verified matches. See the search notes below for details.' : 'No companies remain in this campaign. Removed companies will not be saved again.'
+                  : state.error || 'No verified companies are available yet.'}
               </td></tr>}
             </tbody>
           </table>
