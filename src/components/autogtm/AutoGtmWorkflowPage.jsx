@@ -185,6 +185,15 @@ export default function AutoGtmWorkflowPage({ domain = 'keethub.lovable.app' }) 
     }
   };
 
+  useEffect(() => {
+    // A later-phase URL must enter Phase 3, not merely render it, when the
+    // saved plan has no usable campaigns. Entering it enables AI generation.
+    if (campaignsEnabled && campaignsReady && !campaignError && !campaignPlan.campaigns.length &&
+        PHASES.indexOf(selectedPhase) > 5) {
+      changePhase('research_segments_loading');
+    }
+  }, [campaignsEnabled, campaignsReady, campaignError, campaignPlan?.campaigns.length, selectedPhase]);
+
   // Determine current numeric step (1 to 6)
   const getStepNumber = (p) => {
     if (p.startsWith('research_company')) return 1;

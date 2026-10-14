@@ -1,4 +1,4 @@
-import { campaignFields, type Campaign, type CampaignProfile } from './campaigns-core.ts';
+import { campaignFields, isGenericCampaignAudience, type Campaign, type CampaignProfile } from './campaigns-core.ts';
 import { ResearchError } from './research-core.ts';
 
 export const CAMPAIGN_MODEL = 'anthropic/claude-haiku-4.5';
@@ -55,7 +55,7 @@ export function validateCampaigns(input: unknown, context: ReturnType<typeof cam
     const ids = list(raw.source_fact_ids, 1, 8, 100);
     if (ids.some(id => !known.has(id)) || !ids.some(id => id === 'company:offering' || id.startsWith('company:product:'))) throw invalid();
     const key = fields.target_audience.toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
-    if (seen.has(key) || /^(first.time buyers|experienced users|people evaluating alternatives|advisers evaluating) of\b/i.test(fields.target_audience)) throw invalid();
+    if (seen.has(key) || isGenericCampaignAudience(fields.name) || isGenericCampaignAudience(fields.target_audience)) throw invalid();
     seen.add(key);
     const pain_points = list(raw.pain_points, 1, 4, 240), criteria = list(raw.criteria, 1, 5, 240);
     // Counts have no fields in this schema. Reject numerical market/lead claims in prose too.

@@ -37,9 +37,14 @@ export function campaignFields(input: unknown): Omit<Campaign, 'id' | 'origin' |
     reasoning: string('reasoning', 600, false) };
 }
 
+export function isGenericCampaignAudience(value: string): boolean {
+  return /^(?:first[- ]time buyers of|experienced users of|people evaluating alternatives (?:to|of)|advisers evaluating(?: of)?)\s+/i.test(value.trim());
+}
+
 export function withoutCampaignTemplates(plan: CampaignPlan): CampaignPlan {
   const campaigns = plan.campaigns.filter(campaign => !(campaign.origin === 'suggested' &&
-    campaign.reasoning.startsWith('Suggested fit: the researched offering includes ')));
+    (campaign.reasoning.startsWith('Suggested fit: the researched offering includes ') ||
+      isGenericCampaignAudience(campaign.name) || isGenericCampaignAudience(campaign.target_audience))));
   return { ...plan, campaigns, selected_ids: plan.selected_ids.filter(id => campaigns.some(c => c.id === id)) };
 }
 

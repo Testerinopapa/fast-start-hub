@@ -1,10 +1,13 @@
-// Earlier generated plans could contain the fixed language-learning template.
+// Earlier plans could contain fixed templates or generic buying-context fallbacks.
 // Keep research-based suggestions and user-created/edited campaigns.
+const isGenericAudience = value => /^(?:first[- ]time buyers of|experienced users of|people evaluating alternatives (?:to|of)|advisers evaluating(?: of)?)\s+/i.test((value || '').trim());
+
 export function withoutCampaignTemplates(plan) {
   if (!plan) return plan;
   const campaigns = (plan.campaigns || []).filter(campaign => campaign && campaign.id && campaign.name &&
     campaign.target_audience && campaign.ideal_customer &&
-    !(campaign.origin === 'suggested' && campaign.reasoning?.startsWith('Suggested fit: the researched offering includes ')));
+    !(campaign.origin === 'suggested' && (campaign.reasoning?.startsWith('Suggested fit: the researched offering includes ') ||
+      isGenericAudience(campaign.name) || isGenericAudience(campaign.target_audience))));
   const ids = new Set(campaigns.map(campaign => campaign.id));
   return { ...plan, campaigns, selected_ids: (plan.selected_ids || []).filter(id => ids.has(id)) };
 }

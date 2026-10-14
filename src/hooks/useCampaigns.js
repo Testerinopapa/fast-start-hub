@@ -10,6 +10,7 @@ export default function useCampaigns(jobId, projectId, userId, enabled, allowAut
   const [failure, setFailure] = useState(null);
   const [busy, setBusy] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
+  const [loadingKey, setLoadingKey] = useState(null);
   const saving = useRef(false);
   const [revision, setRevision] = useState(0);
   const accept = (result) => {
@@ -31,10 +32,13 @@ export default function useCampaigns(jobId, projectId, userId, enabled, allowAut
     let active = true;
     const controller = new AbortController();
     setFailure(null);
+    setLoadingKey(key);
     campaignRequest(jobId, 'load', { auto_generate: allowAutomatic }, controller.signal).then(result => {
       if (active) accept(result);
     }).catch(error => {
       if (active && error.name !== 'AbortError') setFailure({ key, error });
+    }).finally(() => {
+      if (active) setLoadingKey(null);
     });
     return () => { active = false; controller.abort(); };
   }, [key, enabled, revision, allowAutomatic]);
@@ -62,9 +66,9 @@ export default function useCampaigns(jobId, projectId, userId, enabled, allowAut
     plan: snapshot && snapshot.key === key ? snapshot.plan : null,
     targets: snapshot && snapshot.key === key ? snapshot.targets : [],
     error: failure && failure.key === key ? failure.error : null,
-    generating: regenerating || (snapshot?.key === key && snapshot.generation?.status === 'running'),
+    generating: regenerating || (allowAutomatic && loadingKey === key) || (snapshot?.key === key && snapshot.generation?.status === 'running'),
     generationError: snapshot?.key === key ? snapshot.generation_error : null,
     generationNotice: snapshot?.key === key ? snapshot.generation_notice : null,
-    busy: busy || (snapshot?.key === key && snapshot.generation?.status === 'running'), mutate, retry: () => setRevision(value => value + 1),
+    busy: busy || (allowAutomatic && loadingKey === key) || (snapshot?.key === key && snapshot.generation?.status === 'running'), mutate, retry: () => setRevision(value => value + 1),
   };
 }
