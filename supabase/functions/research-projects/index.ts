@@ -1,10 +1,13 @@
 import { adminClient, authenticate, endpoint, json, readBody } from '../_shared/backend.ts';
 import { companyUrl, domainOf, ResearchError } from '../_shared/research-core.ts';
+import { exportProject } from '../_shared/project-export.ts';
 
 export const handler = endpoint(async (req) => {
   const db = adminClient();
   const { ownerId } = await authenticate(req, db);
   const body = await readBody(req);
+  if (body.action === 'export') return json(await exportProject(db, ownerId, body.job_id));
+  if (body.action !== undefined && body.action !== 'list') throw new ResearchError('INVALID_REQUEST', 'Unknown project action.');
   let query = db.from('projects')
     .select('id, domain, updated_at, research_jobs(id, status, created_at)')
     .eq('owner_id', ownerId)

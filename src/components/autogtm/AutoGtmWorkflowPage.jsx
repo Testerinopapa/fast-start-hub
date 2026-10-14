@@ -25,6 +25,7 @@ import useCompanyDiscovery from '../../hooks/useCompanyDiscovery';
 import usePeopleDiscovery from '../../hooks/usePeopleDiscovery';
 import { campaignSegments } from '../../lib/campaigns';
 import CampaignEditor from './CampaignEditor';
+import ProjectJsonExport from './ProjectJsonExport';
 
 const PHASES = [
   'research_company_loading',
@@ -409,7 +410,9 @@ export default function AutoGtmWorkflowPage({ domain = 'keethub.lovable.app' }) 
             </span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-start gap-2">
+            <ProjectJsonExport jobId={research?.job.id || new URLSearchParams(window.location.search).get('job')}
+              domain={domain} userId={session?.user.id} />
             <button
               type="button"
               onClick={() => setIsAutoPlay(!isAutoPlay)}

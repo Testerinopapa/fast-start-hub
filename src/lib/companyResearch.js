@@ -28,7 +28,8 @@ export function validateResearchResult(result, domain, jobId) {
 }
 
 async function invoke(name, body, signal) {
-  const unavailable = name === 'people-discovery' ? 'Could not reach decision-maker research. Check your connection and that the Phase 5 backend has been deployed.'
+  const unavailable = name === 'research-projects' && body.action === 'export' ? 'Could not export this project. Check your connection and that the updated research-projects function has been deployed.'
+    : name === 'people-discovery' ? 'Could not reach decision-maker research. Check your connection and that the Phase 5 backend has been deployed.'
     : name === 'company-discovery' ? 'Could not reach company discovery. Check your connection and that the Phase 4 backend has been deployed.'
     : name === 'campaigns' ? 'Could not reach campaign planning. Check your connection and that the Phase 3 backend has been deployed.' : 'Could not reach company research. Check your connection and that the backend has been deployed.';
   const { data } = await supabase.auth.getSession();
@@ -77,4 +78,16 @@ export async function listResearchProjects() {
 export async function latestJobForDomain(domain) {
   const { projects } = await invoke('research-projects', { domain });
   return projects[0]?.latestJob?.id || null;
+}
+
+export async function exportResearchProject(jobId, domain, signal) {
+  const result = await invoke('research-projects', { action: 'export', job_id: jobId }, signal);
+  if (result?.format !== 'autogtm.project-export' || result.schema_version !== 1) {
+    throw new Error('Project JSON export is unavailable. Deploy the updated research-projects function.');
+  }
+  if (result.job?.id !== jobId || !result.project?.id || result.job.project_id !== result.project.id ||
+      normalizeWebsite(result.project.domain).domain !== normalizeWebsite(domain).domain) {
+    throw new Error('The export does not match this project. No file was downloaded.');
+  }
+  return result;
 }
