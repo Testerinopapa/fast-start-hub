@@ -18,7 +18,8 @@ export default function Step5PeopleTable({ discovery, canContinue = false, onNex
         <p role="status" aria-live="polite">{!ready ? 'Loading saved decision makers…'
           : running ? `Researching company teams · ${state.companies_completed} of ${state.companies_total} companies · ${rows.length} contacts identified`
           : `${rows.length} publicly identified contacts · ${state.companies_completed} of ${state.companies_total} companies researched`}</p>
-        <p className="mt-1 text-[11px]">Public website evidence only. Current employment and email/phone details are not verified.</p>
+        <p className="mt-1 text-[11px]">Public professional sources. Current employment and email/phone details are not verified.</p>
+        {Boolean(state?.company_domains?.length) && <p className="mt-1 text-[11px]">Researching saved Phase 4 companies: {state.company_domains.join(', ')}</p>}
         {(error || state?.error) && <p role="alert" className="mt-2 text-red-700">{error?.message || state.error}</p>}
         <div className="flex flex-wrap gap-2 mt-2">
           {(error || state?.status === 'failed') && <button type="button" disabled={busy} onClick={error ? reload : resume}
@@ -87,6 +88,7 @@ export default function Step5PeopleTable({ discovery, canContinue = false, onNex
                     <a href={person.source_urls[0]} target="_blank" rel="noopener noreferrer" className="inline-block mt-1 text-[10px] text-[#0d9467]"
                       title={person.evidence?.association}>Publicly identified · Source</a>
                     <span className="block text-[10px] text-gray-400">Found {new Date(person.identified_at).toLocaleDateString()}</span>
+                    {person.source_published_at && <span className="block text-[10px] text-gray-400">Source published {new Date(person.source_published_at).toLocaleDateString()}</span>}
                   </td>
 
                   {/* Job Title */}
@@ -123,14 +125,21 @@ export default function Step5PeopleTable({ discovery, canContinue = false, onNex
             })}
             {!running && !rows.length && <tr><td colSpan={5} className="py-12 px-4 text-center text-gray-500">
               {error || state?.error ? 'Contact research could not finish. Saved progress is retained.'
-                : 'No supported professional contacts were found within the research limit. No names or roles have been inferred.'}
+                : 'No supported contacts were found for the saved companies listed above. Research notes show the searched sources, exclusions and page outcomes. No names or roles have been inferred.'}
             </td></tr>}
           </tbody>
         </table>
       </div>}
-      {Boolean(state?.warnings?.length) && <details className="px-4 py-3 text-xs text-gray-500 border-t border-black/[0.06]">
+      {Boolean(state?.warnings?.length || state?.diagnostics?.length) && <details className="px-4 py-3 text-xs text-gray-500 border-t border-black/[0.06]">
         <summary className="cursor-pointer">Research notes</summary>
-        {state.warnings.map((note, index) => <p key={index} className="mt-2">{note}</p>)}
+        {(state.warnings || []).map((note, index) => <p key={index} className="mt-2">{note}</p>)}
+        {(state.diagnostics || []).map((event, index) => <p key={`diagnostic-${index}`} className="mt-2 break-words">
+          {event.company_domain} · {event.stage} · {event.outcome}: {event.query || event.url || ''}
+          {event.result_count !== undefined && ` · ${event.result_count} search results`}
+          {event.extracted_count !== undefined && ` · ${event.extracted_count} extracted contacts`}
+          {event.accepted_count !== undefined && ` · ${event.accepted_count} accepted`}
+          {event.name && ` · ${event.name}`} {event.reason}
+        </p>)}
       </details>}
 
       {/* Pagination & Next Button */}

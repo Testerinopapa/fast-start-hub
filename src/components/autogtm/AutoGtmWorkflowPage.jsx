@@ -306,7 +306,7 @@ export default function AutoGtmWorkflowPage({ domain = 'keethub.lovable.app' }) 
       `checking ${discovery.state?.pages_attempted || 0} of ${discovery.state?.candidates_count || 0} candidate websites…`,
     ],
     5: [
-      'searching public team and leadership pages…',
+      'searching company, corporate and public leadership sources…',
       `researching ${people.state?.companies_completed || 0} of ${people.state?.companies_total || discovery.state?.saved.length || 0} saved companies…`,
       'saving supported names, roles and professional sources…',
     ],
