@@ -1,5 +1,21 @@
 # Phase 4: Find Companies
 
+## Pending provider-error fix
+
+Read-only inspection of the failed Asana run found three searches, five page attempts and zero verified results. The final attempted domain was `pcmag.com`. The existing helper collapsed both HTTP 401 and 403 into `PROVIDER_CONFIGURATION`, and did not save the provider's status/body, so the historical error does not establish whether the credential was invalid or the website was restricted. `FIRECRAWL_API_KEY` is present in the research project; its value was not retrieved.
+
+The local fix distinguishes a 401 credential rejection from a generic 403 refusal, and recognizes Firecrawl's documented unsupported/restricted-source codes. Company discovery records those source refusals as warnings and continues with remaining candidates within the reserved budget. Unknown 403 errors still stop with an accurate message identifying the request. Raw provider errors are not returned or logged. See [Firecrawl error codes](https://docs.firecrawl.dev/api-reference/errors).
+
+No secret update or migration is needed for this code change. Deploy only after approval:
+
+```powershell
+npx supabase@2.120.0 functions deploy company-discovery --project-ref cvpeezzkzsbosyuhmhmf --use-api
+```
+
+The existing failed run has exhausted its five candidate pages. Deployment does not rewrite its historical error or rerun consumed requests. New runs and any resumed runs with remaining budget use the corrected handling. Other functions importing the shared helper retain their deployed version until explicitly redeployed.
+
+## Earlier automatic-workflow fix
+
 The original Phase 4 migration and `company-discovery` function are deployed (confirmed read-only on 2026-10-12). The automatic workflow fix is local and only changes the frontend. Publish the updated frontend through the existing hosting process; this fix needs no SQL or Edge Function deployment. No live Firecrawl request was made while investigating. Tests and build commands were not run, following the request to skip validation work.
 
 The empty-table investigation found that the campaigns existed but their discovery state was absent. The user's screenshot showed the older manual screen ("Select a campaign and click Find Companies"), although fresh requests to both the exact workflow URL and the app entry served `/assets/index-C2C921dl.js`, which contains automatic discovery and no longer contains that prompt. The user reports publishing and hard-refreshing already, so browser caching is not a confirmed explanation. The next diagnostic is to compare the JavaScript asset loaded by the affected browser with that server response. The observed published commit is `32f5ba5`; the Stage 3 transition changes described below remain local until included in a subsequent release.

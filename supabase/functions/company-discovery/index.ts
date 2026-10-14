@@ -53,8 +53,16 @@ async function advance(db: Admin, profile: DiscoveryProfile, campaignId: string,
     // A database failure leaves the reservation in place for safe recovery.
     if (error instanceof ResearchError && ['SAVE_FAILED', 'CAMPAIGN_CHANGED'].includes(error.code)) throw error;
     const known = error instanceof ResearchError;
+    if (!search && known && ['SOURCE_UNSUPPORTED', 'SOURCE_RESTRICTED'].includes(error.code)) {
+      // A source-specific refusal consumes this page's reservation only. Keep
+      // researching the remaining candidates without retrying the blocked site.
+      return (await save(db, profile, campaignId, state.version, { ...state, working: false,
+        status: state.pages_attempted >= state.candidates.length ? 'completed' : 'researching',
+        error: null, error_code: null,
+        warnings: warning(state, `${candidate.domain} was skipped: ${error.message}`) })).state;
+    }
     return (await save(db, profile, campaignId, state.version, { ...state, status: 'failed', working: false,
-      error: known ? error.message : 'Company discovery was interrupted. Your saved results remain available.',
+      error: known ? `${search ? 'Company search' : candidate.domain}: ${error.message}` : 'Company discovery was interrupted. Your saved results remain available.',
       error_code: known ? error.code : 'DISCOVERY_FAILED',
       warnings: warning(state, 'The unsuccessful request was counted toward the run limit. Resuming uses only the remaining budget.') })).state;
   }
