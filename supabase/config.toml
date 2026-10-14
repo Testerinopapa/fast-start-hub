@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.company-discovery]
 verify_jwt = false
+
+[functions.people-discovery]
+verify_jwt = false

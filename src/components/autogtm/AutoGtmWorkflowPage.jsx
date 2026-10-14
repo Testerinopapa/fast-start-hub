@@ -22,6 +22,7 @@ import useCompanyResearch from '../../hooks/useCompanyResearch';
 import useCompetitorResearch from '../../hooks/useCompetitorResearch';
 import useCampaigns from '../../hooks/useCampaigns';
 import useCompanyDiscovery from '../../hooks/useCompanyDiscovery';
+import usePeopleDiscovery from '../../hooks/usePeopleDiscovery';
 import { campaignSegments } from '../../lib/campaigns';
 import CampaignEditor from './CampaignEditor';
 
@@ -82,13 +83,25 @@ export default function AutoGtmWorkflowPage({ domain = 'keethub.lovable.app' }) 
   const companyInputs = discovery.inputs.filter(input => discoveryCampaigns.some(c => c.id === input.campaign_id));
   const companiesCanContinue = discovery.ready && discovery.state?.status === 'completed' && !discovery.state.criteria_changed &&
     discovery.state.saved.length > 0 && !discovery.busy && !discovery.error;
+  const peopleEnabled = companiesCanContinue && PHASES.indexOf(selectedPhase) >= 8;
+  const people = usePeopleDiscovery(research?.job.id, research?.project.id, session?.user.id, discoveryCampaignId,
+    peopleEnabled, discovery.state?.version);
+  const peopleCanContinue = people.ready && people.state.status === 'completed' && people.state.results.length > 0 && !people.busy && !people.error;
   // Saved phase links and manual controls wait for real results and a saved selection.
   const phase = !researchReady ? 'research_company_loading'
     : competitorEnabled && !competitorsReady ? 'research_competitors_loading'
     : campaignsEnabled && !campaignsReady ? 'research_segments_loading'
     : campaignsEnabled && PHASES.indexOf(selectedPhase) > 5 && !campaignsCanContinue ? 'research_segments'
     : PHASES.indexOf(selectedPhase) > 7 && !companiesCanContinue ? 'outreach_companies'
+    : PHASES.indexOf(selectedPhase) > 9 && !peopleCanContinue ? 'outreach_people'
     : selectedPhase;
+  const [peopleAnimationReady, setPeopleAnimationReady] = useState(false);
+  useEffect(() => {
+    setPeopleAnimationReady(false);
+    if (!peopleEnabled) return;
+    const timer = setTimeout(() => setPeopleAnimationReady(true), 4200);
+    return () => clearTimeout(timer);
+  }, [peopleEnabled, discoveryCampaignId]);
   const [discoveryAnimationReady, setDiscoveryAnimationReady] = useState(false);
   useEffect(() => {
     setDiscoveryAnimationReady(false);
@@ -156,7 +169,8 @@ export default function AutoGtmWorkflowPage({ domain = 'keethub.lovable.app' }) 
     else if (!campaignsReady && PHASES.indexOf(nextPhase) > 4) nextPhase = 'research_segments_loading';
     else if (!campaignsCanContinue && PHASES.indexOf(nextPhase) > 5) nextPhase = 'research_segments';
     else if (!companiesCanContinue && PHASES.indexOf(nextPhase) > 7) nextPhase = 'outreach_companies';
-    if (userTriggered) setIsAutoPlay(nextPhase.startsWith('research_segments') || nextPhase.startsWith('outreach_companies'));
+    else if (!peopleCanContinue && PHASES.indexOf(nextPhase) > 9) nextPhase = 'outreach_people';
+    if (userTriggered) setIsAutoPlay(nextPhase.startsWith('research_segments') || nextPhase.startsWith('outreach_companies') || nextPhase.startsWith('outreach_people'));
     setPhase(nextPhase);
 
     if (typeof window !== 'undefined') {
@@ -190,7 +204,7 @@ export default function AutoGtmWorkflowPage({ domain = 'keethub.lovable.app' }) 
   if (currentStep > 2 || phase === 'research_competitors') completedSteps.push(2);
   if (currentStep > 3 || phase === 'research_segments') completedSteps.push(3);
   if (companiesCanContinue) completedSteps.push(4);
-  if (currentStep > 5 || phase === 'outreach_people') completedSteps.push(5);
+  if (peopleCanContinue) completedSteps.push(5);
   if (phase === 'outreach_emails' || phase === 'final') completedSteps.push(6);
 
   // Auto progression timers for loading phases
@@ -209,8 +223,12 @@ export default function AutoGtmWorkflowPage({ domain = 'keethub.lovable.app' }) 
     // Manual continuation from real company results still completes the existing
     // loading animation even when the user has paused workflow auto-play.
     if (phase === 'outreach_people_loading' && companiesCanContinue) {
-      const handoff = setTimeout(() => changePhase('outreach_people'), 4200);
-      return () => clearTimeout(handoff);
+      if (people.error || people.state?.status === 'failed' || (peopleAnimationReady && people.ready &&
+          (people.state.results.length > 0 || people.state.status === 'completed'))) {
+        const handoff = setTimeout(() => changePhase('outreach_people'), 0);
+        return () => clearTimeout(handoff);
+      }
+      return;
     }
     if (!isAutoPlay) return;
 
@@ -240,10 +258,8 @@ export default function AutoGtmWorkflowPage({ domain = 'keethub.lovable.app' }) 
           discovery.state.results.some(company => discovery.state.saved.some(saved => saved.domain === company.domain))) {
         timer = setTimeout(() => changePhase('outreach_people_loading'), 3500);
       }
-    } else if (phase === 'outreach_people_loading') {
-      timer = setTimeout(() => changePhase('outreach_people'), 4200);
     } else if (phase === 'outreach_people') {
-      timer = setTimeout(() => changePhase('outreach_emails_loading'), 3500);
+      if (peopleCanContinue) timer = setTimeout(() => changePhase('outreach_emails_loading'), 3500);
     } else if (phase === 'outreach_emails_loading') {
       timer = setTimeout(() => changePhase('outreach_emails'), 7000);
     } else if (phase === 'outreach_emails') {
@@ -252,7 +268,8 @@ export default function AutoGtmWorkflowPage({ domain = 'keethub.lovable.app' }) 
 
     return () => clearTimeout(timer);
   }, [phase, isAutoPlay, researchReady, companyAnimationReady, competitorsReady, competitorAnimationReady, campaignsReady, campaignsCanContinue, campaignAnimationReady, editingCampaign, companiesCanContinue,
-    discoveryCampaignId, discoveryAnimationReady, discovery.ready, discovery.error, discovery.state?.status, discovery.state?.version, discovery.state?.criteria_changed]);
+    discoveryCampaignId, discoveryAnimationReady, discovery.ready, discovery.error, discovery.state?.status, discovery.state?.version, discovery.state?.criteria_changed,
+    peopleAnimationReady, people.ready, people.error, people.state, peopleCanContinue]);
 
   // Jump to a step when clicked on the rail
   const handleStepClick = (step) => {
@@ -289,9 +306,9 @@ export default function AutoGtmWorkflowPage({ domain = 'keethub.lovable.app' }) 
       `checking ${discovery.state?.pages_attempted || 0} of ${discovery.state?.candidates_count || 0} candidate websites…`,
     ],
     5: [
-      'identifying key decision makers…',
-      'finding verified emails & LinkedIn…',
-      'enriching contact profiles…',
+      'searching public team and leadership pages…',
+      `researching ${people.state?.companies_completed || 0} of ${people.state?.companies_total || discovery.state?.saved.length || 0} saved companies…`,
+      'saving supported names, roles and professional sources…',
     ],
     6: [
       'picking the hottest lead…',
@@ -301,7 +318,8 @@ export default function AutoGtmWorkflowPage({ domain = 'keethub.lovable.app' }) 
     ],
   };
 
-  const isRunningPhase = phase.endsWith('_loading') || (currentStep === 4 && discoveryRunning && !discovery.state?.criteria_changed);
+  const isRunningPhase = phase.endsWith('_loading') || (currentStep === 4 && discoveryRunning && !discovery.state?.criteria_changed)
+    || (currentStep === 5 && people.state?.status === 'researching' && !people.error);
   const [subtaskIndex, setSubtaskIndex] = useState(0);
 
   useEffect(() => {
@@ -325,7 +343,8 @@ export default function AutoGtmWorkflowPage({ domain = 'keethub.lovable.app' }) 
   }, [phase, currentStep, isRunningPhase]);
 
   const currentStepTasks = WORKFLOW_STEP_TASKS[currentStep] || [];
-  const activeError = researchError || (currentStep === 2 ? competitorError : currentStep === 3 ? campaignError : currentStep === 4 ? discovery.error : null);
+  const activeError = researchError || (currentStep === 2 ? competitorError : currentStep === 3 ? campaignError : currentStep === 4 ? discovery.error
+    : currentStep === 5 ? people.error || (people.state?.error ? { message: people.state.error } : null) : null);
   const currentAgentItems = activeError ? [{ label: activeError.message, status: 'active' }] : isRunningPhase
     ? currentStepTasks.slice(0, subtaskIndex + 1).map((task, idx) => ({
         label: task,
@@ -516,6 +535,8 @@ export default function AutoGtmWorkflowPage({ domain = 'keethub.lovable.app' }) 
           {/* Phase 10: outreach_people */}
           {phase === 'outreach_people' && (
             <Step5PeopleTable
+              discovery={people}
+              canContinue={peopleCanContinue}
               onNext={() => changePhase('outreach_emails_loading', true)}
             />
           )}
@@ -549,6 +570,11 @@ export default function AutoGtmWorkflowPage({ domain = 'keethub.lovable.app' }) 
           {phase === 'final' && (
             <FinalProjectDashboard
               companyData={company}
+              peopleDiscovery={people}
+              companyDiscovery={discovery}
+              campaigns={discoveryCampaigns}
+              campaignId={discoveryCampaignId}
+              onCampaignChange={selectDiscoveryCampaign}
               onOpenTrialModal={() => setIsTrialModalOpen(true)}
             />
           )}

@@ -5,6 +5,11 @@ import Step6EmailComposer from './Step6EmailComposer';
 
 export default function FinalProjectDashboard({
   companyData,
+  peopleDiscovery,
+  companyDiscovery,
+  campaigns,
+  campaignId,
+  onCampaignChange,
   onOpenTrialModal
 }) {
   const [activeTab, setActiveTab] = useState('companies');
@@ -17,11 +22,11 @@ export default function FinalProjectDashboard({
           <div className="flex items-center gap-2">
             <span className="size-2 rounded-full bg-[#10b981]" />
             <h1 className="text-lg font-bold text-gray-900 tracking-tight">
-              {companyData?.name || 'PrimKeet'} Go-To-Market Pipeline
+              {companyData?.name || 'Company'} Go-To-Market Pipeline
             </h1>
           </div>
           <p className="text-xs text-gray-500 mt-1">
-            Pipeline ready · 200 companies · 818 verified decision makers · cold outreach sequence prepared
+            {companyDiscovery?.state?.saved.length || 0} saved companies · {peopleDiscovery?.state?.results.length || 0} publicly identified contacts
           </p>
         </div>
 
@@ -51,7 +56,7 @@ export default function FinalProjectDashboard({
               : 'text-gray-600 hover:text-gray-900 hover:bg-black/[0.04]'
           }`}
         >
-          Companies (200)
+          Companies ({companyDiscovery?.state?.saved.length || 0})
         </button>
 
         <button
@@ -63,7 +68,7 @@ export default function FinalProjectDashboard({
               : 'text-gray-600 hover:text-gray-900 hover:bg-black/[0.04]'
           }`}
         >
-          People (818)
+          People ({peopleDiscovery?.state?.results.length || 0})
         </button>
 
         <button
@@ -81,8 +86,9 @@ export default function FinalProjectDashboard({
 
       {/* Tab Panels */}
       <div>
-        {activeTab === 'companies' && <Step4CompaniesTable />}
-        {activeTab === 'people' && <Step5PeopleTable />}
+        {activeTab === 'companies' && <Step4CompaniesTable discovery={companyDiscovery} campaigns={campaigns}
+          campaignId={campaignId} onCampaignChange={onCampaignChange} />}
+        {activeTab === 'people' && <Step5PeopleTable discovery={peopleDiscovery} />}
         {activeTab === 'emails' && <Step6EmailComposer onClaimCredits={onOpenTrialModal} />}
       </div>
     </div>
