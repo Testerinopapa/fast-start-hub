@@ -41,7 +41,8 @@ export default function Step3CampaignsGrid({
             <div
               key={seg.id || idx}
               onClick={() => !busy && onSelectSegment && onSelectSegment(seg)}
-              className={`bg-white rounded-2xl border p-5 transition-all shadow-xs cursor-pointer relative ${
+              style={{ animationDelay: `${idx * 120}ms`, animationFillMode: 'both' }}
+              className={`bg-white rounded-2xl border p-5 transition-all shadow-xs cursor-pointer relative animate-card-enter motion-reduce:animate-none ${
                 isSelected
                   ? 'border-black/30 shadow-md ring-1 ring-black/10'
                   : 'border-black/[0.08] hover:border-black/20'
@@ -131,6 +132,11 @@ export default function Step3CampaignsGrid({
                 </div>
               </div>
 
+              <p className="mb-2 text-[10px] font-semibold text-gray-500" title={seg.evidenceSummary}>
+                {seg.audienceBasis === 'observed' ? 'Audience observed in research · targeting proposed'
+                  : seg.audienceBasis === 'custom' ? 'Your campaign' : 'Inferred audience suggestion · validate fit'}
+              </p>
+
               {/* Use case snippet */}
               <p className="break-words text-xs text-gray-700 leading-relaxed mb-3">
                 {useCaseText ? (
@@ -144,11 +150,13 @@ export default function Step3CampaignsGrid({
               {seg.pain && (
                 <div className="space-y-1 mb-3">
                   <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                    {seg.dataSource === 'research' ? 'WHY THIS SEGMENT' : 'PAIN'}
+                    {seg.reasoning ? 'POTENTIAL PAIN' : 'WHY THIS SEGMENT'}
                   </span>
                   <p className="break-words text-xs text-gray-600 leading-snug">{seg.pain}</p>
                 </div>
               )}
+
+              {seg.reasoning && <p className="mb-3 break-words text-xs text-gray-500 leading-relaxed">{seg.reasoning}</p>}
 
               {/* CRITERIA */}
               {criteriaList.length > 0 && (

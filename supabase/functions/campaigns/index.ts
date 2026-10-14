@@ -1,5 +1,5 @@
 import { adminClient, authenticate, endpoint, json, readBody, type Admin } from '../_shared/backend.ts';
-import { campaignFields, campaignTargets, generateCampaigns, withoutCampaignTemplates, type Campaign, type CampaignPlan, type CampaignProfile } from '../_shared/campaigns-core.ts';
+import { CAMPAIGN_GENERATION_VERSION, campaignFields, campaignTargets, generateCampaigns, withoutCampaignTemplates, type Campaign, type CampaignPlan, type CampaignProfile } from '../_shared/campaigns-core.ts';
 import { isUuid, ResearchError } from '../_shared/research-core.ts';
 
 async function save(db: Admin, profile: CampaignProfile, version: number, plan: CampaignPlan) {
@@ -23,8 +23,14 @@ export const handler = endpoint(async (req) => {
   let plan = profile.campaign_plan;
   if (!plan) plan = (await save(db, profile, 0, generateCampaigns(profile))).plan;
   const cleaned = withoutCampaignTemplates(plan);
-  if (cleaned.campaigns.length !== plan.campaigns.length) {
-    plan = withoutCampaignTemplates((await save(db, profile, plan.version, cleaned)).plan);
+  // Repair empty plans produced by the older restrictive generator once. Keep
+  // all existing custom/edited campaigns, and respect deletions on new plans.
+  const regenerate = action === 'load' && !cleaned.campaigns.length && cleaned.generation_version !== CAMPAIGN_GENERATION_VERSION;
+  if (regenerate || cleaned.campaigns.length !== plan.campaigns.length) {
+    const next = regenerate ? { ...cleaned, ...generateCampaigns(profile) } : cleaned;
+    // The existing CAS RPC returns the winning plan if another tab saved first;
+    // never replace a campaign created concurrently with this load.
+    plan = withoutCampaignTemplates((await save(db, profile, plan.version, next)).plan);
   }
   if (action !== 'load') {
     if (!Number.isInteger(body.version) || body.version !== plan.version) throw new ResearchError('CONFLICT', 'Campaigns changed in another tab. Reload the latest plan before saving.', 409);
@@ -39,7 +45,8 @@ export const handler = endpoint(async (req) => {
     } else if (action === 'update' || action === 'delete') {
       const current = campaigns.find(c => c.id === body.campaign_id);
       if (!current) throw new ResearchError('NOT_FOUND', 'This campaign is no longer in the project.', 404);
-      if (action === 'update') campaigns = campaigns.map(c => c.id === current.id ? { ...c, ...campaignFields(body.campaign), origin: 'customized' } : c);
+      if (action === 'update') campaigns = campaigns.map(c => c.id === current.id ? { ...c, ...campaignFields(body.campaign),
+        origin: 'customized', pain_points: [], criteria: [], audience_basis: undefined, evidence_summary: undefined } : c);
       else { campaigns = campaigns.filter(c => c.id !== current.id); selected_ids = selected_ids.filter(id => id !== current.id); }
     } else if (action === 'select') {
       if (!Array.isArray(body.selected_ids) || body.selected_ids.length > 12 || body.selected_ids.some(id => !campaigns.some(c => c.id === id))) {

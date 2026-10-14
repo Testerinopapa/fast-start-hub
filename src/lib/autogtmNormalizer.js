@@ -125,6 +125,9 @@ export function normalizeSegments(raw) {
         seg.exampleClients ?? seg.example_clients
       ),
       dataSource: seg.dataSource,
+      audienceBasis: seg.audienceBasis,
+      evidenceSummary: seg.evidenceSummary || '',
+      reasoning: seg.reasoning || '',
       sourceUrls: toSafeArray(seg.sourceUrls),
       selected: seg.selected,
       percentage: seg.dataSource === 'research' ? null : Number(seg.percentage) || null,

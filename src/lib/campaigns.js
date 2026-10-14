@@ -1,5 +1,5 @@
 // Earlier generated plans could contain the fixed language-learning template.
-// Keep researched audiences and user-created/edited campaigns only.
+// Keep research-based suggestions and user-created/edited campaigns.
 export function withoutCampaignTemplates(plan) {
   if (!plan) return plan;
   const campaigns = (plan.campaigns || []).filter(campaign => campaign && campaign.id && campaign.name &&
@@ -14,8 +14,11 @@ export function campaignSegments(plan) {
   return (saved?.campaigns || []).map(campaign => ({
     id: campaign.id, label: campaign.name, dataSource: 'research',
     icon: /education|tutor|language/i.test(campaign.target_industry) ? 'graduation-cap' : 'building',
-    useCase: campaign.ideal_customer, pain: campaign.reasoning,
-    criteria: [campaign.target_audience, campaign.target_industry,
+    useCase: campaign.ideal_customer, pain: campaign.pain_points?.join(' ') || campaign.reasoning,
+    reasoning: campaign.pain_points?.length ? campaign.reasoning : '',
+    audienceBasis: campaign.origin !== 'suggested' ? 'custom' : campaign.audience_basis || 'inferred',
+    evidenceSummary: campaign.evidence_summary || '',
+    criteria: [...(campaign.criteria?.length ? campaign.criteria : [campaign.target_audience]), campaign.target_industry,
       campaign.target_locations?.length ? `Locations: ${campaign.target_locations.join(', ')}` : '',
     ].filter(Boolean),
     keywords: campaign.keywords || [], exampleClients: [], sourceUrls: campaign.source_urls || [],
