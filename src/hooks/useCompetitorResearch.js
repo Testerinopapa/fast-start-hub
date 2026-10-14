@@ -42,6 +42,6 @@ export default function useCompetitorResearch(jobId, projectId, userId, enabled)
   return {
     data: snapshot && snapshot.jobId === jobId && snapshot.userId === userId ? snapshot.data : null,
     error: failure && failure.jobId === jobId && failure.userId === userId ? failure.error : null,
-    retry: () => { retryRequest.current = { jobId, userId }; setFailure(null); setAttempt(value => value + 1); },
+    retry: () => { retryRequest.current = { jobId, userId }; setSnapshot(null); setFailure(null); setAttempt(value => value + 1); },
   };
 }

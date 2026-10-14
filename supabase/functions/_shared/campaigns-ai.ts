@@ -1,5 +1,6 @@
 import { campaignFields, isGenericCampaignAudience, type Campaign, type CampaignProfile } from './campaigns-core.ts';
 import { ResearchError } from './research-core.ts';
+import { businessFacts } from './competitor-core.ts';
 
 export const CAMPAIGN_MODEL = 'anthropic/claude-haiku-4.5';
 export type Generation = { status: 'running' | 'completed' | 'failed'; request_id: string; job_id: string;
@@ -13,10 +14,10 @@ export function campaignContext(profile: CampaignProfile) {
     if (text) facts.push({ id, text, source_urls: sources.filter(url => typeof url === 'string').slice(0, 8) });
   };
   add('company:offering', profile.business_description, profile.source_urls);
-  for (const [index, product] of (profile.products || []).slice(0, 10).entries()) {
+  for (const [index, product] of businessFacts(profile.products || []).slice(0, 10).entries()) {
     if (clean(product.name) || clean(product.description)) add(`company:product:${index}`, `${clean(product.name, 100)}: ${clean(product.description)}`, product.source_urls || profile.source_urls);
   }
-  for (const [index, customer] of (profile.customers || []).slice(0, 8).entries())
+  for (const [index, customer] of businessFacts(profile.customers || []).slice(0, 8).entries())
     add(`company:audience:${index}`, `${clean(customer.name, 100)}: ${clean(customer.description)}`, customer.source_urls || profile.source_urls);
   for (const [index, competitor] of (profile.competitor_research?.results || []).slice(0, 6).entries()) {
     add(`competitor:${index}`, `${competitor.domain} (${competitor.relationship}): ${clean(competitor.description)}. Products: ${competitor.products.slice(0, 4).map(p => clean(p.name, 80)).join(', ')}. Audiences: ${competitor.customers.slice(0, 4).map(p => clean(p.name, 80)).join(', ')}.`, competitor.source_urls);
@@ -67,8 +68,11 @@ export function validateCampaigns(input: unknown, context: ReturnType<typeof cam
   });
 }
 export function campaignApiKey() {
-  const key = Deno.env.get('OPENROUTER_API_KEY');
+  const key = Deno.env.get('OPENROUTER_API_KEY')?.trim();
   if (!key) throw new ResearchError('AI_NOT_CONFIGURED', 'Set OPENROUTER_API_KEY in the research project’s Supabase Secrets before generating campaigns.', 503);
+  if (!/^[\x21-\x7E]+$/.test(key) || /^Bearer\b/i.test(key) || /^["']|["']$/.test(key)) {
+    throw new ResearchError('AI_INVALID_KEY_FORMAT', 'OPENROUTER_API_KEY contains whitespace, quotes or invalid characters. Save only the key value in Supabase Secrets, without a Bearer prefix.', 503);
+  }
   return key;
 }
 export async function generateAiCampaigns(profile: CampaignProfile, key: string): Promise<Campaign[]> {
@@ -77,6 +81,7 @@ export async function generateAiCampaigns(profile: CampaignProfile, key: string)
   const count = Math.min(6, 12 - protectedCampaigns.length);
   if (count < 4) throw new ResearchError('CAMPAIGN_LIMIT', 'Keep at most eight custom or edited campaigns to leave room for four new suggestions.');
   let response: Response;
+  const started = Date.now();
   try {
     response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST', signal: AbortSignal.timeout(55000),
@@ -91,14 +96,30 @@ export async function generateAiCampaigns(profile: CampaignProfile, key: string)
         ],
       }),
     });
-  } catch {
-    throw new ResearchError('AI_UNAVAILABLE', 'Campaign generation did not finish. The reserved request will not be retried automatically; use Regenerate when ready.', 503);
+  } catch (error) {
+    // Classify locally; never log raw exceptions, headers, credentials or research.
+    const name = error instanceof Error ? error.name : '';
+    const detail = error instanceof Error ? error.message : '';
+    const code = name === 'TimeoutError' || name === 'AbortError' ? 'AI_TIMEOUT'
+      : /header|bytestring|invalid character/i.test(detail) ? 'AI_INVALID_KEY_FORMAT'
+      : /dns|resolve|lookup/i.test(detail) ? 'AI_DNS_ERROR'
+      : /certificate|tls|ssl/i.test(detail) ? 'AI_TLS_ERROR' : 'AI_NETWORK_ERROR';
+    console.error(JSON.stringify({ event: 'campaign_provider_failure', code, elapsed_ms: Date.now() - started }));
+    const messages: Record<string, string> = {
+      AI_TIMEOUT: 'OpenRouter did not respond within 55 seconds.',
+      AI_INVALID_KEY_FORMAT: 'The OpenRouter authorization header could not be created. Check that the Supabase secret contains only the key value.',
+      AI_DNS_ERROR: 'The research backend could not resolve openrouter.ai.',
+      AI_TLS_ERROR: 'The research backend could not establish a secure connection to OpenRouter.',
+      AI_NETWORK_ERROR: 'The research backend could not connect to OpenRouter.',
+    };
+    throw new ResearchError(code, `${messages[code]} [${code}] No campaigns were saved. Use Regenerate after resolving the issue; this request will not repeat automatically.`, 503);
   }
   if (!response.ok) {
+    console.error(JSON.stringify({ event: 'campaign_provider_failure', code: 'AI_PROVIDER_ERROR', status: response.status, elapsed_ms: Date.now() - started }));
     const message = response.status === 401 || response.status === 403 ? 'OpenRouter rejected the configured key or model access. Check the Supabase secret and OpenRouter permissions.'
       : response.status === 402 ? 'OpenRouter credits are insufficient for Claude. Add credits or keep your saved campaigns.'
       : response.status === 429 ? 'OpenRouter rate limit reached. Wait before explicitly regenerating.'
-      : 'OpenRouter could not generate campaigns. Your saved campaigns are unchanged.';
+      : `OpenRouter returned HTTP ${response.status}. Check the campaigns function logs and OpenRouter request activity. Your saved campaigns are unchanged.`;
     throw new ResearchError('AI_PROVIDER_ERROR', message, 503);
   }
   const result = await response.json().catch(() => null);

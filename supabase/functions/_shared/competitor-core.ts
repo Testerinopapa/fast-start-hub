@@ -1,5 +1,5 @@
 import { getDomain } from 'npm:tldts@7.4.18';
-import { canonicalPage, companyUrl, domainOf, ResearchError } from './research-core.ts';
+import { companyUrl, domainOf, ResearchError } from './research-core.ts';
 
 export type CompanyProfile = {
   job_id: string; project_id: string; owner_id: string; company_name: string | null;
@@ -19,6 +19,7 @@ export type CompetitorState = {
   warnings: string[]; batch_attempted: boolean; provider_job_id: string | null; pages_completed: number;
   updated_at?: string; error?: string | null; error_code?: string | null;
   working?: boolean; search_successes?: number;
+  run?: number;
 };
 const clean = (value: unknown, max = 1500) => typeof value === 'string' ? value.trim().slice(0, max) : '';
 const stop = new Set('a an the and or is are be to of for in on with by at from that this their your our its as it through using users user offers offer company business platform service services product products solution solutions software app application tool tools provides provide designed helps help includes include online best alternative alternatives more all can which has have'.split(' '));
@@ -28,6 +29,17 @@ const terms = (value: string) => [...new Set(words(value).filter(word => word.le
   .map(word => synonyms[word] || word.replace(/s$/, '')))];
 const factText = (facts: Fact[] = []) => facts.map(f => `${f.name} ${f.description || ''}`).join(' ');
 
+// Creator content on a hosting platform describes the creator, not the platform's customers.
+export function businessFacts(facts: Fact[]): Fact[] {
+  return facts.filter(fact => !fact.source_urls?.length || fact.source_urls.some(source => {
+    try {
+      const url = new URL(source), host = url.hostname.replace(/^www\./, '');
+      return host !== 'youtu.be' && !(host === 'youtube.com' &&
+        /^\/(?:@|watch(?:\/|$)|shorts(?:\/|$)|channel(?:\/|$)|c\/|user\/|playlist(?:\/|$)|results(?:\/|$))/i.test(url.pathname));
+    } catch { return false; }
+  }));
+}
+
 export function businessDomain(value: string) {
   const host = domainOf(companyUrl(value));
   // Distinct tenant sites are separate businesses, including Lovable previews.
@@ -36,21 +48,22 @@ export function businessDomain(value: string) {
 }
 export function companyContext(profile: CompanyProfile) {
   const brand = new Set(terms(`${profile.company_name || ''} ${profile.source_urls.map(url => businessDomain(url)).join(' ')}`));
-  const product = terms(`${factText(profile.products)} ${profile.business_description || ''}`).filter(word => !brand.has(word));
-  const audience = terms(factText(profile.customers)).filter(word => !brand.has(word));
+  const product = terms(`${factText(businessFacts(profile.products))} ${profile.business_description || ''}`).filter(word => !brand.has(word));
+  const audience = terms(factText(businessFacts(profile.customers))).filter(word => !brand.has(word));
   return { product, audience };
 }
 export function competitorQueries(profile: CompanyProfile): string[] {
   const { product, audience } = companyContext(profile);
   if (product.length < 2) throw new ResearchError('INSUFFICIENT_PROFILE', 'The company profile needs a clearer product description before competitor discovery.', 422);
   const name = clean(profile.company_name, 100).replace(/[^\p{L}\p{N} .-]/gu, '') || businessDomain(profile.source_urls[0]);
+  const exclusions = ' -inurl:blog -inurl:alternatives -inurl:learn -site:quora.com -site:reddit.com';
   return [...new Set([
-    `${product.slice(0, 7).join(' ')} alternatives`,
-    `${product.slice(0, 4).join(' ')} ${audience.slice(0, 5).join(' ') || product.slice(4, 9).join(' ')} providers`.replace(/\s+/g, ' '),
+    `${product.slice(0, 7).join(' ')} platforms${exclusions}`,
+    `${product.slice(0, 4).join(' ')} ${audience.slice(0, 5).join(' ') || product.slice(4, 9).join(' ')} providers${exclusions}`.replace(/\s+/g, ' '),
     `"${name}" alternatives`,
   ])].slice(0, 3);
 }
-const excluded = new Set('google.com youtube.com facebook.com instagram.com linkedin.com reddit.com wikipedia.org x.com twitter.com pinterest.com g2.com capterra.com getapp.com trustradius.com alternativeto.net producthunt.com medium.com'.split(' '));
+const excluded = new Set('google.com youtube.com youtu.be quora.com facebook.com instagram.com linkedin.com reddit.com wikipedia.org x.com twitter.com pinterest.com g2.com capterra.com getapp.com trustradius.com alternativeto.net producthunt.com medium.com'.split(' '));
 export function collectCandidates(profile: CompanyProfile, current: Candidate[], links: unknown): Candidate[] {
   const own = new Set(profile.source_urls.map(businessDomain));
   const context = companyContext(profile);
@@ -60,6 +73,7 @@ export function collectCandidates(profile: CompanyProfile, current: Candidate[],
       const url = companyUrl(raw.url);
       const domain = businessDomain(url.href);
       if (own.has(domain) || excluded.has(domain) || /\.(pdf|zip|png|jpe?g|mp4)$/i.test(url.pathname)) continue;
+      if (/\/(?:blog|learn|articles?|categories)\//i.test(url.pathname) || /alternatives?|websites-like/i.test(url.pathname)) continue;
       const text = terms(`${clean(raw.title)} ${clean(raw.description)}`);
       const relevance = context.product.filter(t => text.includes(t)).length * 3 + context.audience.filter(t => text.includes(t)).length;
       const previous = found.get(domain);
@@ -94,17 +108,19 @@ export function rankCompetitors(profile: CompanyProfile, candidates: Candidate[]
   const context = companyContext(profile);
   const own = new Set(profile.source_urls.map(businessDomain));
   const results = new Map<string, Competitor>();
+  const rejected: Record<string, number> = {};
+  const reject = (reason: string) => { rejected[reason] = (rejected[reason] || 0) + 1; };
   for (const raw of pages.slice(0, 10)) {
     const page = raw as { metadata?: { sourceURL?: string; url?: string; statusCode?: number }; markdown?: string; json?: Record<string, unknown> };
     try {
       const source = page.metadata?.sourceURL;
-      if (!source || (page.metadata?.statusCode ?? 200) >= 400 || !page.markdown) continue;
-      const candidate = candidates.find(c => canonicalPage(c.url) === canonicalPage(source));
-      if (!candidate) continue;
+      if (!source || (page.metadata?.statusCode ?? 200) >= 400 || !page.markdown) { reject('unreadable_page'); continue; }
+      const candidate = candidates.find(c => c.domain === businessDomain(source));
+      if (!candidate) { reject('unmatched_domain'); continue; }
       const finalSource = page.metadata?.url || source;
-      if (businessDomain(finalSource) !== candidate.domain || own.has(candidate.domain)) continue;
+      if (businessDomain(finalSource) !== candidate.domain || own.has(candidate.domain)) { reject('redirect_or_own_domain'); continue; }
       const data = page.json;
-      if (!data || data.is_business_website !== true) continue;
+      if (!data || data.is_business_website !== true) { reject('not_business_website'); continue; }
       const evidence = evidenceText(page.markdown);
       const supported = (quote: unknown) => {
         const text = evidenceText(clean(quote, 600));
@@ -119,14 +135,14 @@ export function rankCompetitors(profile: CompanyProfile, candidates: Candidate[]
       const description = data.description as { text?: string; evidence_quote?: string } | null;
       const summary = description && supported(description.evidence_quote) ? clean(description.evidence_quote, 600) : null;
       const products = facts('products'), customers = facts('customers'), features = facts('features'), pricing = facts('pricing');
-      if (!summary && !products.length) continue;
+      if (!summary && !products.length) { reject('unsupported_description_or_products'); continue; }
       const productTerms = terms(`${summary || ''} ${factText(products)} ${factText(features)}`);
       const audienceTerms = terms(factText(customers));
       const matchedProduct = context.product.filter(t => productTerms.includes(t));
       const matchedAudience = context.audience.filter(t => audienceTerms.includes(t));
-      if (matchedProduct.length < 2) continue; // Keyword evidence is required, not just a search result.
+      if (!matchedProduct.length || (matchedProduct.length === 1 && matchedProduct[0].length < 4)) { reject('no_product_overlap'); continue; }
       const coverage = matchedProduct.length / Math.max(1, Math.min(context.product.length, 12));
-      const direct = coverage >= 0.3 && matchedAudience.length > 0;
+      const direct = matchedProduct.length >= 2 && coverage >= 0.3 && matchedAudience.length > 0;
       const score = Math.min(100, Math.round(coverage * 65 + Math.min(matchedAudience.length, 3) * 10));
       const name = clean(data.company_name, 200);
       const company: Competitor = { domain: candidate.domain, name: name && evidence.includes(evidenceText(name)) ? name : null,
@@ -134,8 +150,10 @@ export function rankCompetitors(profile: CompanyProfile, candidates: Candidate[]
         relationship: direct ? 'direct' : 'related',
         ranking_reason: `Shared product terms: ${matchedProduct.join(', ')}.${matchedAudience.length ? ` Shared audience terms: ${matchedAudience.join(', ')}.` : ' No shared audience confirmed.'}` };
       results.set(candidate.domain, company);
-    } catch { /* Never promote unverified or redirected results to company facts. */ }
+    } catch { reject('invalid_page'); }
   }
+  console.info(JSON.stringify({ event: 'competitor_ranking', job_id: profile.job_id,
+    pages: pages.length, accepted: results.size, rejected }));
   const names = new Set<string>();
   return [...results.values()].sort((a, b) => Number(b.relationship === 'direct') - Number(a.relationship === 'direct') || b.relevance_score - a.relevance_score || a.domain.localeCompare(b.domain))
     .filter(company => {

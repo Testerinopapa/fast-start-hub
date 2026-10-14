@@ -24,7 +24,8 @@ async function save(db: Admin, profile: CompanyProfile, state: CompetitorState, 
 const stale = (state: CompetitorState) => !state.updated_at || Date.now() - Date.parse(state.updated_at) > LEASE_MS;
 const warnings = (state: CompetitorState, message: string) => [...new Set([...state.warnings, message])].slice(0, 10);
 function canRetry(state: CompetitorState) {
-  return state.status === 'failed' && !state.batch_attempted &&
+  return (state.status === 'completed' && !state.results.length && (state.run || 1) < 2) ||
+    state.status === 'failed' && !state.batch_attempted &&
     (state.searches_used < state.queries.length || state.candidates.length > 0);
 }
 export function competitorSnapshot(profile: CompanyProfile, state: CompetitorState) {
@@ -64,7 +65,14 @@ export async function reconcileCompetitors(db: Admin, profile: CompanyProfile, s
 // reservations prevent effect replays, refreshes and concurrent tabs spending twice.
 export async function advanceCompetitors(db: Admin, profile: CompanyProfile, retry = false): Promise<CompetitorState> {
   let state = profile.competitor_research;
-  if (state.status === 'completed') return state;
+  if (state.status === 'completed') {
+    if (!retry || !canRetry(state)) return state;
+    const { data, error } = await db.rpc('autogtm_retry_empty_competitors', {
+      p_job: profile.job_id, p_owner: profile.owner_id, p_version: state.version,
+    });
+    if (error) throw new ResearchError('RETRY_UNAVAILABLE', 'Could not restart the empty competitor search. Confirm the competitor retry migration has been deployed.', 503);
+    return data.state; // The next poll performs the first search; reservation is atomic.
+  }
   if (state.provider_job_id) {
     if (state.status === 'failed') return state;
     return reconcileCompetitors(db, profile, state);
@@ -90,7 +98,10 @@ export async function advanceCompetitors(db: Admin, profile: CompanyProfile, ret
       // Search snippets only. Scraping search results here would multiply credit use.
       const result = await firecrawl('/search', { query, limit: 8, sources: ['web'] });
       if (!Array.isArray(result.data?.web)) throw new ResearchError('PROVIDER_RESPONSE', 'The provider returned an invalid competitor search result.', 502);
-      return (await save(db, profile, state, { working: false, candidates: collectCandidates(profile, state.candidates, result.data.web),
+      const candidates = collectCandidates(profile, state.candidates, result.data.web);
+      console.info(JSON.stringify({ event: 'competitor_search', job_id: profile.job_id, query,
+        results: result.data.web.length, retained_candidates: candidates.length }));
+      return (await save(db, profile, state, { working: false, candidates,
         search_successes: (state.search_successes || 0) + 1 })).state;
     } catch (error) {
       const known = error instanceof ResearchError;

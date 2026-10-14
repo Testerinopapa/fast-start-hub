@@ -493,6 +493,9 @@ export default function AutoGtmWorkflowPage({ domain = 'keethub.lovable.app' }) 
               searchQueries={competitorData?.queries || []}
               competitors={competitorData?.results || []}
               warnings={competitorData?.warnings || []}
+              onRetry={!competitorData?.results.length && competitorData?.can_retry ? () => {
+                setIsAutoPlay(true); changePhase('research_competitors_loading'); retryCompetitors();
+              } : null}
               onNext={() => changePhase('research_segments_loading', true)}
             />
           )}
