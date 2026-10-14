@@ -67,10 +67,11 @@ export default function AutoGtmWorkflowPage({ domain = 'keethub.lovable.app' }) 
   );
   const competitorsReady = competitorData?.status === 'completed' && !competitorError;
   const campaignsEnabled = competitorsReady && PHASES.indexOf(selectedPhase) >= 4;
-  const { plan: campaignPlan, targets: campaignTargets, error: campaignError, busy: savingCampaigns, mutate: changeCampaigns, retry: retryCampaigns } = useCampaigns(
-    research?.job.id, research?.project.id, session?.user.id, campaignsEnabled,
+  const { plan: campaignPlan, targets: campaignTargets, error: campaignError, busy: savingCampaigns, generating: generatingCampaigns,
+    generationError: campaignGenerationError, generationNotice: campaignGenerationNotice, mutate: changeCampaigns, retry: retryCampaigns } = useCampaigns(
+    research?.job.id, research?.project.id, session?.user.id, campaignsEnabled, PHASES.indexOf(selectedPhase) <= 5,
   );
-  const campaignsReady = Boolean(campaignPlan);
+  const campaignsReady = Boolean(campaignPlan) && !generatingCampaigns;
   const campaignsCanContinue = campaignsReady && campaignTargets.length > 0 && !savingCampaigns && !campaignError;
   const [chosenCampaignId, setChosenCampaignId] = useState(() => new URLSearchParams(window.location.search).get('campaign') || '');
   const discoveryCampaigns = campaignPlan?.campaigns || [];
@@ -250,7 +251,7 @@ export default function AutoGtmWorkflowPage({ domain = 'keethub.lovable.app' }) 
     } else if (phase === 'research_segments') {
       // Preserve the original viewing delay, then discover companies using the
       // saved campaign selection without requiring Continue or Find clicks.
-      if (campaignsCanContinue && !editingCampaign) timer = setTimeout(() => changePhase('outreach_companies_loading'), 3500);
+      if (campaignsCanContinue && !editingCampaign && !campaignGenerationError && !campaignGenerationNotice) timer = setTimeout(() => changePhase('outreach_companies_loading'), 3500);
     } else if (phase === 'outreach_companies') {
       // Keep the original result-viewing pause, then continue only after this
       // campaign's real companies have been saved by the automatic discovery flow.
@@ -269,7 +270,7 @@ export default function AutoGtmWorkflowPage({ domain = 'keethub.lovable.app' }) 
     return () => clearTimeout(timer);
   }, [phase, isAutoPlay, researchReady, companyAnimationReady, competitorsReady, competitorAnimationReady, campaignsReady, campaignsCanContinue, campaignAnimationReady, editingCampaign, companiesCanContinue,
     discoveryCampaignId, discoveryAnimationReady, discovery.ready, discovery.error, discovery.state?.status, discovery.state?.version, discovery.state?.criteria_changed,
-    peopleAnimationReady, people.ready, people.error, people.state, peopleCanContinue]);
+    peopleAnimationReady, people.ready, people.error, people.state, peopleCanContinue, campaignGenerationError, campaignGenerationNotice]);
 
   // Jump to a step when clicked on the rail
   const handleStepClick = (step) => {
@@ -500,7 +501,9 @@ export default function AutoGtmWorkflowPage({ domain = 'keethub.lovable.app' }) 
               selectedIds={campaignPlan?.selected_ids || []}
               onSelectSegment={selectCampaign}
               busy={savingCampaigns}
-              error={editingCampaign ? null : campaignError?.message}
+              error={editingCampaign ? null : campaignError?.message || campaignGenerationError}
+              notice={campaignGenerationNotice}
+              onRegenerate={() => { setIsAutoPlay(true); changeCampaigns('regenerate'); }}
               canContinue={campaignsCanContinue}
               onCreate={() => { setIsAutoPlay(false); setEditingCampaign({ id: crypto.randomUUID(), isNew: true }); }}
               onEdit={id => { setIsAutoPlay(false); setEditingCampaign(campaignPlan.campaigns.find(c => c.id === id)); }}

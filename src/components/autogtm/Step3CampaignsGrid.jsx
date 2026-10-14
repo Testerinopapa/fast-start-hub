@@ -12,6 +12,7 @@ export default function Step3CampaignsGrid({
   onNext = null,
   selectedIds = null, onCreate = null, onEdit = null, onDelete = null,
   busy = false, error = null, canContinue = true,
+  onRegenerate = null, notice = null,
 }) {
   const displaySegments = normalizeSegments(segments).filter(segment => segment.dataSource === 'research');
 
@@ -19,9 +20,15 @@ export default function Step3CampaignsGrid({
     <div className="w-full max-w-4xl mx-auto mt-6 space-y-4 animate-card-enter">
       {onCreate && <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="text-xs text-gray-500">{busy ? 'Saving…' : `${selectedIds?.length || 0} selected · Review suggested targets`}</span>
+        <div className="flex flex-wrap gap-2">
+        {onRegenerate && <button type="button" disabled={busy} onClick={onRegenerate}
+          title="Replaces untouched suggestions; keeps custom and edited campaigns. Uses one model request."
+          className="text-xs px-3 py-1.5 rounded-lg border border-black/10 bg-white text-gray-600 shadow-2xs">Regenerate suggestions</button>}
         <button type="button" disabled={busy || displaySegments.length >= 12} onClick={onCreate}
           className="text-xs px-3 py-1.5 rounded-lg border border-black/10 bg-white text-gray-600 shadow-2xs">New campaign</button>
+        </div>
       </div>}
+      {notice && <p className="text-xs text-gray-500">{notice}</p>}
       {error && <p role="alert" className="text-xs text-gray-600 leading-relaxed">{error}</p>}
       {!displaySegments.length && !error && <p role="status" className="text-xs text-gray-600 leading-relaxed">No campaigns yet. Create one to define your target customer.</p>}
       {/* 2x2 Grid of Segments */}
