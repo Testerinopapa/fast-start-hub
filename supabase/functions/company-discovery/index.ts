@@ -1,8 +1,8 @@
 import { adminClient, authenticate, endpoint, json, readBody, secret, type Admin } from '../_shared/backend.ts';
 import { firecrawl } from '../_shared/firecrawl.ts';
 import { isUuid, ResearchError } from '../_shared/research-core.ts';
-import { canResume, discoveryCandidates, discoveryExtraction, discoverySnapshot, newDiscovery, running, stale,
-  targetFor, targetSignature, verifiedCompany, type Discovery, type DiscoveryProfile } from '../_shared/discovery-core.ts';
+import { canResume, candidateResults, discoveryCandidates, discoveryExtraction, discoverySnapshot, enrichCompany, newDiscovery, running, stale,
+  targetFor, targetSignature, upgradeDiscovery, withDiagnostics, type Discovery, type DiscoveryEvent, type DiscoveryProfile } from '../_shared/discovery-core.ts';
 
 async function save(db: Admin, profile: DiscoveryProfile, campaignId: string, version: number, state: Discovery) {
   const { data, error } = await db.rpc('autogtm_save_discovery', { p_job: profile.job_id, p_owner: profile.owner_id,
@@ -37,29 +37,43 @@ async function advance(db: Admin, profile: DiscoveryProfile, campaignId: string,
     if (search) {
       const result = await firecrawl('/search', { query, limit: 8, sources: ['web'] });
       if (!Array.isArray(result.data?.web)) throw new ResearchError('PROVIDER_RESPONSE', 'Firecrawl returned an unreadable search result.', 502);
-      const candidates = discoveryCandidates(state, result.data.web);
-      return (await save(db, profile, campaignId, state.version, { ...state, candidates, working: false,
+      const events: DiscoveryEvent[] = [];
+      const candidates = discoveryCandidates(state, result.data.web, events);
+      const next = withDiagnostics({ ...state, candidates }, [
+        { type: 'search', outcome: 'completed', query, result_count: result.data.web.length, retained_count: candidates.length,
+          reason: 'Search completed; candidates are visible before website verification.' }, ...events,
+      ]);
+      return (await save(db, profile, campaignId, state.version, { ...next, results: candidateResults(next), working: false,
         status: state.searches_used < state.queries.length ? 'searching' : candidates.length ? 'researching' : 'completed' })).state;
     }
     const response = await firecrawl('/scrape', { url: candidate.url, onlyMainContent: true,
       formats: ['markdown', discoveryExtraction], parsers: [], timeout: 30000 }, 45000);
-    const company = verifiedCompany(state, candidate, response.data);
-    const results = company ? [...state.results.filter(row => row.domain !== company.domain), company]
-      .sort((a, b) => b.relevance_score - a.relevance_score || a.domain.localeCompare(b.domain)) : state.results;
-    return (await save(db, profile, campaignId, state.version, { ...state, results, working: false,
+    const { company, reason } = enrichCompany(state, candidate, response.data);
+    const results = [...state.results.filter(row => row.domain !== candidate.domain), ...(company ? [company] : [])]
+      .sort((a, b) => b.relevance_score - a.relevance_score || a.domain.localeCompare(b.domain));
+    const next = withDiagnostics({ ...state, results,
+      candidates: state.candidates.map(row => row.domain === candidate.domain && !company ? { ...row, rejection_reason: reason } : row),
+    }, [{ type: 'enrichment', outcome: company?.research_status || 'rejected', domain: candidate.domain, url: candidate.url,
+      reason: company?.research_notes?.join(' ') || reason }]);
+    return (await save(db, profile, campaignId, state.version, { ...next, working: false,
       status: state.pages_attempted >= state.candidates.length ? 'completed' : 'researching',
-      warnings: company ? state.warnings : warning(state, `${candidate.domain} was omitted because its page did not provide verifiable business details matching this campaign.`) })).state;
+      warnings: company ? state.warnings : warning(state, `${candidate.domain} was rejected: ${reason}`) })).state;
   } catch (error) {
     // A database failure leaves the reservation in place for safe recovery.
     if (error instanceof ResearchError && ['SAVE_FAILED', 'CAMPAIGN_CHANGED'].includes(error.code)) throw error;
     const known = error instanceof ResearchError;
+    state = withDiagnostics({ ...state,
+      results: search ? state.results : state.results.map(company => company.domain === candidate.domain ? { ...company,
+        enrichment_status: 'unavailable', research_notes: [known ? error.message : 'Website enrichment was interrupted; search candidate retained.'] } : company),
+    }, [{ type: 'provider', outcome: 'error', ...(search ? { query } : { domain: candidate.domain, url: candidate.url }),
+      reason: known ? error.message : 'Provider request failed; previously discovered candidates remain available.' }]);
     if (!search && known && ['SOURCE_UNSUPPORTED', 'SOURCE_RESTRICTED'].includes(error.code)) {
       // A source-specific refusal consumes this page's reservation only. Keep
       // researching the remaining candidates without retrying the blocked site.
       return (await save(db, profile, campaignId, state.version, { ...state, working: false,
         status: state.pages_attempted >= state.candidates.length ? 'completed' : 'researching',
         error: null, error_code: null,
-        warnings: warning(state, `${candidate.domain} was skipped: ${error.message}`) })).state;
+        warnings: warning(state, `${candidate.domain} enrichment was unavailable; its search candidate remains unverified. ${error.message}`) })).state;
     }
     return (await save(db, profile, campaignId, state.version, { ...state, status: 'failed', working: false,
       error: known ? `${search ? 'Company search' : candidate.domain}: ${error.message}` : 'Company discovery was interrupted. Your saved results remain available.',
@@ -72,6 +86,9 @@ export const handler = endpoint(async req => {
   const db = adminClient();
   const { ownerId } = await authenticate(req, db);
   const body = await readBody(req);
+  // Older frontends label every returned row as verified. Require the client
+  // that understands research status before returning unverified candidates.
+  if (body.data_version !== 2) throw new ResearchError('CLIENT_UPDATE_REQUIRED', 'Company discovery has been updated. Refresh this page to load company research statuses.', 409);
   if (!isUuid(body.job_id)) throw new ResearchError('INVALID_REQUEST', 'A research job ID is required.');
   const action = body.action || 'load';
   if (!['load', 'start', 'advance', 'resume', 'save', 'remove'].includes(String(action))) throw new ResearchError('INVALID_REQUEST', 'Unknown company discovery action.');
@@ -80,13 +97,26 @@ export const handler = endpoint(async req => {
   if (!data) throw new ResearchError('NOT_FOUND', 'Company research was not found in this project.', 404);
   if (!Object.hasOwn(data, 'company_discovery')) throw new ResearchError('NOT_DEPLOYED', 'The Phase 4 database migration has not been deployed.', 503);
   const profile = data as DiscoveryProfile;
-  if (action === 'load') return json(discoverySnapshot(profile));
+  if (action === 'load') {
+    for (const [id, existing] of Object.entries(profile.company_discovery)) {
+      if (existing.discovery_version === 2 || (existing.working && !stale(existing)) ||
+          !profile.campaign_plan?.campaigns.some(campaign => campaign.id === id)) continue;
+      profile.company_discovery[id] = (await save(db, profile, id, existing.version, upgradeDiscovery(existing))).state;
+    }
+    return json(discoverySnapshot(profile));
+  }
   if (!isUuid(body.campaign_id)) throw new ResearchError('INVALID_REQUEST', 'Choose a saved campaign.');
   const campaignId = body.campaign_id;
   const target = targetFor(profile, campaignId);
   let state = profile.company_discovery[campaignId];
   if (!Number.isInteger(body.version) || body.version !== (state?.version || 0)) {
     throw new ResearchError('CONFLICT', 'Company results changed in another tab. Reload saved results.', 409);
+  }
+  if (state && state.discovery_version !== 2) {
+    if (state.working && !stale(state)) throw new ResearchError('BUSY', 'A website request is still running. Saved progress will refresh shortly.', 409);
+    const upgraded = await save(db, profile, campaignId, state.version, upgradeDiscovery(state));
+    if (!upgraded.applied) throw new ResearchError('CONFLICT', 'Company results changed in another tab. Reload saved results.', 409);
+    state = upgraded.state;
   }
   if (action === 'start') {
     // Opening a completed campaign or pressing Find twice only reads its cache.

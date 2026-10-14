@@ -199,7 +199,8 @@ export default function AutoGtmWorkflowPage({ domain = 'keethub.lovable.app' }) 
     // the existing recovery controls immediately, even when auto-play is paused.
     if (phase === 'outreach_companies_loading') {
       if (discovery.error || discovery.state?.status === 'failed' || (discovery.state?.criteria_changed && discovery.state.run >= 3) ||
-          (discoveryAnimationReady && discovery.ready && discovery.state?.status === 'completed' && !discovery.state.criteria_changed)) {
+          (discoveryAnimationReady && discovery.ready && !discovery.state?.criteria_changed &&
+            (discovery.state?.results.length > 0 || discovery.state?.status === 'completed'))) {
         const reveal = setTimeout(() => changePhase('outreach_companies'), 0);
         return () => clearTimeout(reveal);
       }

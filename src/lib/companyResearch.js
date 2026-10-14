@@ -64,7 +64,7 @@ export async function startResearch(value) {
 export const researchStatus = (id, signal) => invoke('research-status', { job_id: id }, signal);
 export const competitorResearch = (id, retry, signal) => invoke('competitor-research', { job_id: id, retry }, signal);
 export const campaignRequest = (id, action = 'load', values = {}, signal) => invoke('campaigns', { ...values, job_id: id, action }, signal);
-export const discoveryRequest = (id, action = 'load', values = {}, signal) => invoke('company-discovery', { ...values, job_id: id, action }, signal);
+export const discoveryRequest = (id, action = 'load', values = {}, signal) => invoke('company-discovery', { ...values, job_id: id, action, data_version: 2 }, signal);
 export const researchPath = (domain, jobId) => `/auto-gtm/company/${encodeURIComponent(domain)}/explore?job=${encodeURIComponent(jobId)}`;
 
 export async function listResearchProjects() {
