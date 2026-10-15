@@ -1,5 +1,6 @@
 import { adminClient, authenticate, endpoint, json, readBody, secret, type Admin } from '../_shared/backend.ts';
 import { firecrawl } from '../_shared/firecrawl.ts';
+import { crawl4aiSearch, crawl4aiScrape } from '../_shared/crawl4ai.ts';
 import { isUuid, ResearchError } from '../_shared/research-core.ts';
 import { canResume, candidateResults, discoveryCandidates, discoveryExtraction, discoverySnapshot, enrichCompany, newDiscovery, running, stale,
   targetFor, targetSignature, upgradeDiscovery, withDiagnostics, type Discovery, type DiscoveryEvent, type DiscoveryProfile } from '../_shared/discovery-core.ts';
@@ -19,7 +20,10 @@ const warning = (state: Discovery, message: string) => [...new Set([...state.war
 // response is never automatically submitted again, including after a refresh.
 async function advance(db: Admin, profile: DiscoveryProfile, campaignId: string, state: Discovery): Promise<Discovery> {
   if (!running(state) || (state.working && !stale(state))) return state;
-  secret('FIRECRAWL_API_KEY');
+  // Both providers retain the existing reservation, three-search and ten-page caps.
+  // Crawl4AI Cloud is opt-in; self-hosting requires a separate search backend.
+  const useCrawl4AI = Deno.env.get('AUTOGTM_DISCOVERY_PROVIDER') === 'crawl4ai';
+  if (!useCrawl4AI) secret('FIRECRAWL_API_KEY');
   const interrupted = state.working ? warning(state, 'An interrupted request was counted toward the limit and was not repeated.') : state.warnings;
   const search = state.searches_used < state.queries.length;
   const candidate = state.candidates[state.pages_attempted];
@@ -35,20 +39,20 @@ async function advance(db: Admin, profile: DiscoveryProfile, campaignId: string,
   state = claim.state;
   try {
     if (search) {
-      const result = await firecrawl('/search', { query, limit: 8, sources: ['web'] });
-      if (!Array.isArray(result.data?.web)) throw new ResearchError('PROVIDER_RESPONSE', 'Firecrawl returned an unreadable search result.', 502);
+      const links = useCrawl4AI ? await crawl4aiSearch(query) : (await firecrawl('/search', { query, limit: 8, sources: ['web'] })).data?.web;
+      if (!Array.isArray(links)) throw new ResearchError('PROVIDER_RESPONSE', 'Company search returned unreadable results.', 502);
       const events: DiscoveryEvent[] = [];
-      const candidates = discoveryCandidates(state, result.data.web, events);
+      const candidates = discoveryCandidates(state, links, events);
       const next = withDiagnostics({ ...state, candidates }, [
-        { type: 'search', outcome: 'completed', query, result_count: result.data.web.length, retained_count: candidates.length,
+        { type: 'search', outcome: 'completed', query, result_count: links.length, retained_count: candidates.length,
           reason: 'Search completed; candidates are visible before website verification.' }, ...events,
       ]);
       return (await save(db, profile, campaignId, state.version, { ...next, results: candidateResults(next), working: false,
         status: state.searches_used < state.queries.length ? 'searching' : candidates.length ? 'researching' : 'completed' })).state;
     }
-    const response = await firecrawl('/scrape', { url: candidate.url, onlyMainContent: true,
-      formats: ['markdown', discoveryExtraction], parsers: [], timeout: 30000 }, 45000);
-    const { company, reason } = enrichCompany(state, candidate, response.data);
+    const page = useCrawl4AI ? await crawl4aiScrape(candidate.url) : (await firecrawl('/scrape', { url: candidate.url, onlyMainContent: true,
+      formats: ['markdown', discoveryExtraction], parsers: [], timeout: 30000 }, 45000)).data;
+    const { company, reason } = enrichCompany(state, candidate, page);
     const results = [...state.results.filter(row => row.domain !== candidate.domain), ...(company ? [company] : [])]
       .sort((a, b) => b.relevance_score - a.relevance_score || a.domain.localeCompare(b.domain));
     const next = withDiagnostics({ ...state, results,
