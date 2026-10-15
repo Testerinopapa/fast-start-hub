@@ -1,5 +1,10 @@
 import { supabase } from '../integrations/supabase/client';
 
+// Public research-project configuration must also work in Vite development and
+// hosted previews (which do not load .env.production).
+const RESEARCH_URL = import.meta.env.VITE_SUPABASE_URL || 'https://cvpeezzkzsbosyuhmhmf.supabase.co';
+const RESEARCH_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_WMPZN3mwjyDl5fyGlVniJA_qUq5_mRB';
+
 export function normalizeWebsite(value) {
   let url;
   if (typeof value !== 'string' || !value.trim()) throw new Error('Enter a company website.');
@@ -36,18 +41,25 @@ async function invoke(name, body, signal) {
   if (!data.session) throw Object.assign(new Error('Sign in to research a company.'), { code: 'UNAUTHORIZED' });
   let response;
   try {
-    response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${name}`, {
+    response = await fetch(`${RESEARCH_URL.replace(/\/$/, '')}/functions/v1/${name}`, {
       method: 'POST', signal,
-      headers: { 'Content-Type': 'application/json', apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+      headers: { 'Content-Type': 'application/json', apikey: RESEARCH_KEY,
         Authorization: `Bearer ${data.session.access_token}` },
       body: JSON.stringify(body),
     });
   } catch (error) {
     if (error.name === 'AbortError') throw error;
-    throw new Error(unavailable);
+    throw Object.assign(new Error('Cannot connect to the research service. Verify the research project URL, deployment, and browser network access.'), { code: 'NETWORK_UNAVAILABLE' });
   }
   const result = await response.json().catch(() => ({}));
-  if (!response.ok) throw Object.assign(new Error(result.error?.message || unavailable), { code: result.error?.code });
+  if (!response.ok) {
+    const message = result.error?.message || (response.status === 404
+      ? `Research function "${name}" is not deployed on the configured Supabase project.`
+      : response.status === 401 || response.status === 403
+        ? 'Research authorization was rejected. Please sign in again or check the research gateway configuration.'
+        : `Research service returned HTTP ${response.status}. Check the research backend deployment.`);
+    throw Object.assign(new Error(message), { code: result.error?.code || `HTTP_${response.status}` });
+  }
   return result;
 }
 
