@@ -64,7 +64,7 @@ export default function AutoGtmSidebar({
   const hasStep6Done = completedSteps.includes(6);
 
   // Email initial for avatar
-  const initial = (userEmail ? userEmail.charAt(0) : 'G').toUpperCase();
+  const initial = (userEmail && userEmail !== 'Not signed in' ? userEmail.charAt(0) : 'G').toUpperCase();
 
   const displayedCompetitors = showMoreCompetitors ? competitors : competitors.slice(0, 8);
 
@@ -436,7 +436,7 @@ export default function AutoGtmSidebar({
             </div>
             {!collapsed && (
               <div className="min-w-0 truncate">
-                <div className="truncate text-xs font-normal text-gray-700">{userEmail}</div>
+                <div className="truncate text-xs font-normal text-gray-700">{userEmail === 'Not signed in' ? 'Guest' : userEmail}</div>
               </div>
             )}
           </div>
