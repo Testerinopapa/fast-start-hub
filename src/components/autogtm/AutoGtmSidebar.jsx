@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { LogOut } from 'lucide-react';
+import { supabase } from '../../integrations/supabase/client';
 import { useNavigation, PRODUCT_ROUTES } from '../../context/NavigationContext';
 import { normalizeSegments, normalizeCompetitors } from '../../lib/autogtmNormalizer';
 import AgentActivityFeed from './AgentActivityFeed';
@@ -20,6 +22,24 @@ export default function AutoGtmSidebar({
 }) {
   const { navigate } = useNavigation();
   const [collapsed, setCollapsed] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
+  const [signOutError, setSignOutError] = useState('');
+
+  const handleSignOut = async () => {
+    if (signingOut) return;
+    setSigningOut(true);
+    setSignOutError('');
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      onClose?.();
+      navigate(PRODUCT_ROUTES.OUTREACH);
+    } catch (error) {
+      setSignOutError(error?.message || 'Unable to sign out. Please try again.');
+    } finally {
+      setSigningOut(false);
+    }
+  };
   const [isPrimkeetOpen, setIsPrimkeetOpen] = useState(true);
   const [showMoreCompetitors, setShowMoreCompetitors] = useState(false);
 
@@ -438,6 +458,18 @@ export default function AutoGtmSidebar({
             </svg>
           )}
         </button>
+        <button
+          type="button"
+          onClick={handleSignOut}
+          disabled={signingOut}
+          aria-label="Log out"
+          title="Log out"
+          className={`mt-2 flex min-h-10 w-full items-center gap-2.5 rounded-lg px-2 text-left text-xs font-medium text-gray-600 hover:bg-black/[0.04] hover:text-gray-900 disabled:opacity-50 ${collapsed && !onClose ? 'justify-center' : ''}`}
+        >
+          <LogOut className="size-4 shrink-0" />
+          {(!collapsed || onClose) && <span>{signingOut ? 'Logging out…' : 'Log out'}</span>}
+        </button>
+        {signOutError && <p role="alert" className="mt-2 text-xs text-red-600">{signOutError}</p>}
       </div>
     </aside>
   );
