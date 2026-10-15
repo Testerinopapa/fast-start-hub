@@ -60,11 +60,11 @@ function NotFoundPage() {
             <div className="text-xs text-gray-400">Explore and filter the company graph</div>
           </button>
           <button
-            onClick={() => navigate(PRODUCT_ROUTES.SIGN_IN)}
+            onClick={() => navigate(PRODUCT_ROUTES.AUTO_GTM)}
             className="w-full p-3 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] transition text-left cursor-pointer"
           >
-            <div className="font-semibold text-sm text-white">Sign In</div>
-            <div className="text-xs text-gray-400">Sign in to your account</div>
+            <div className="font-semibold text-sm text-white">Try for Free</div>
+            <div className="text-xs text-gray-400">Open the workspace without an account</div>
           </button>
         </div>
       </div>
