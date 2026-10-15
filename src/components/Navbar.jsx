@@ -54,10 +54,10 @@ export default function Navbar() {
             href="/sign-in"
             onClick={(e) => {
               e.preventDefault();
-              navigate(PRODUCT_ROUTES.SIGN_IN);
+              navigate(PRODUCT_ROUTES.AUTO_GTM);
             }}
           >
-            Sign in
+            Try for Free
           </a>
         </div>
 
