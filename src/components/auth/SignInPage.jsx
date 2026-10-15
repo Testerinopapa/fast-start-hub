@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigation, PRODUCT_ROUTES } from '../../context/NavigationContext';
 import { supabase } from '../../integrations/supabase/client';
-import { lovable } from '../../integrations/lovable/index';
 import EmailVerificationPage from './EmailVerificationPage';
 
 export default function SignInPage({ initialMode }) {
@@ -111,21 +110,17 @@ export default function SignInPage({ initialMode }) {
     try {
       setIsLoading(true);
       setError('');
-      const result = await lovable.auth.signInWithOAuth('google', {
-        redirect_uri: window.location.origin,
+      // Google and the rest of the app must issue sessions from the same
+      // Supabase Auth project, which the research backend trusts.
+      const { error: authError } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin + PRODUCT_ROUTES.AUTO_GTM,
+        },
       });
-      if (result.error) {
-        setError(result.error.message || 'Could not sign in with Google.');
-        return;
-      }
-      if (result.redirected) return; // browser is heading to Google; onAuthStateChange picks it up on return
-      const { data, error: sessionError } = await supabase.auth.getUser();
-      if (sessionError || !data.user) {
-        throw sessionError || new Error('Google sign-in did not establish a session. Please try again.');
-      }
-      navigate(PRODUCT_ROUTES.AUTO_GTM);
+      if (authError) throw authError;
     } catch (err) {
-      setError(err.message || 'Could not sign in with Google.');
+      setError(err.message || 'Could not sign in with Google. Check Google OAuth in the login Supabase project.');
     } finally {
       setIsLoading(false);
     }
