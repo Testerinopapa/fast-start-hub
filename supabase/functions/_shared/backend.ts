@@ -25,7 +25,7 @@ export async function authenticate(req: Request, db: Admin) {
     auth: { persistSession: false, autoRefreshToken: false },
   });
   const { data, error } = await auth.auth.getUser(match[1]);
-  if (error || !data.user || data.user.is_anonymous) throw new ResearchError('UNAUTHORIZED', 'Your session expired. Please sign in again.', 401);
+  if (error || !data.user) throw new ResearchError('UNAUTHORIZED', 'Your session expired. Please sign in again.', 401);
   // External identities have local research-owner IDs. A matching email or UUID
   // from a different project must never inherit another account's saved results.
   const { data: owner, error: ownerError } = await db.from('research_owners')
