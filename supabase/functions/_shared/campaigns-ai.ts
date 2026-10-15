@@ -2,7 +2,7 @@ import { campaignFields, isGenericCampaignAudience, type Campaign, type Campaign
 import { ResearchError } from './research-core.ts';
 import { businessFacts } from './competitor-core.ts';
 
-export const CAMPAIGN_MODEL = 'anthropic/claude-haiku-4.5';
+export const CAMPAIGN_MODEL = 'qwen/qwen3.8-27b:free';
 export type Generation = { status: 'running' | 'completed' | 'failed'; request_id: string; job_id: string;
   auto_attempted: boolean; attempts: number; started_at: string; error?: string | null; model?: string };
 const clean = (value: unknown, max = 600) => typeof value === 'string' ? value.trim().slice(0, max) : '';
@@ -37,7 +37,7 @@ export const campaignSchema = { type: 'object', additionalProperties: false, pro
   } },
 }, required: ['campaigns'] };
 export function validateCampaigns(input: unknown, context: ReturnType<typeof campaignContext>, maxCount: number): Campaign[] {
-  const invalid = () => new ResearchError('INVALID_AI_CAMPAIGNS', 'Claude returned incomplete or invalid campaigns. Your saved campaigns are unchanged. Use Regenerate to make another request.', 502);
+  const invalid = () => new ResearchError('INVALID_AI_CAMPAIGNS', 'The AI model returned incomplete or invalid campaigns. Your saved campaigns are unchanged. Use Regenerate to make another request.', 502);
   if (!input || typeof input !== 'object' || Array.isArray(input) || Object.keys(input).some(key => key !== 'campaigns')) throw invalid();
   const campaigns = (input as { campaigns?: unknown }).campaigns;
   if (!Array.isArray(campaigns) || campaigns.length < 4 || campaigns.length > maxCount) throw invalid();
@@ -117,17 +117,17 @@ export async function generateAiCampaigns(profile: CampaignProfile, key: string)
   if (!response.ok) {
     console.error(JSON.stringify({ event: 'campaign_provider_failure', code: 'AI_PROVIDER_ERROR', status: response.status, elapsed_ms: Date.now() - started }));
     const message = response.status === 401 || response.status === 403 ? 'OpenRouter rejected the configured key or model access. Check the Supabase secret and OpenRouter permissions.'
-      : response.status === 402 ? 'OpenRouter credits are insufficient for Claude. Add credits or keep your saved campaigns.'
+      : response.status === 402 ? 'The free Qwen model is unavailable for this account or has exhausted its allowance. No paid model will be used.'
       : response.status === 429 ? 'OpenRouter rate limit reached. Wait before explicitly regenerating.'
       : `OpenRouter returned HTTP ${response.status}. Check the campaigns function logs and OpenRouter request activity. Your saved campaigns are unchanged.`;
     throw new ResearchError('AI_PROVIDER_ERROR', message, 503);
   }
   const result = await response.json().catch(() => null);
   if (result?.error || result?.choices?.[0]?.finish_reason !== 'stop' || typeof result?.choices?.[0]?.message?.content !== 'string') {
-    throw new ResearchError('AI_INCOMPLETE', 'Claude did not return a complete campaign plan. Your existing campaigns are unchanged.', 502);
+    throw new ResearchError('AI_INCOMPLETE', 'The free Qwen model did not return a complete campaign plan. Your existing campaigns are unchanged.', 502);
   }
   let parsed;
   try { parsed = JSON.parse(result.choices[0].message.content); }
-  catch { throw new ResearchError('INVALID_AI_CAMPAIGNS', 'Claude returned unreadable campaign JSON. No suggestions were saved.', 502); }
+  catch { throw new ResearchError('INVALID_AI_CAMPAIGNS', 'The free Qwen model returned unreadable campaign JSON. No suggestions were saved.', 502); }
   return validateCampaigns(parsed, context, count);
 }
