@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigation, PRODUCT_ROUTES } from '../context/NavigationContext';
 import { latestJobForDomain, normalizeWebsite, requestedWebsite, researchStatus, startResearch, validateResearchResult } from '../lib/companyResearch';
 import useAuthSession from './useAuthSession';
+import { ensureGuestSession } from '../lib/guestSession';
 
 // Data only: the workflow owns its existing presentation and animation timing.
 export default function useCompanyResearch(domain) {
@@ -34,7 +35,7 @@ export default function useCompanyResearch(domain) {
 
     if (!userId) {
       sessionStorage.setItem('autogtm-pending-domain', website);
-      navigate(PRODUCT_ROUTES.SIGN_IN);
+      ensureGuestSession().catch(err => { if (active) setError(err); });
       return;
     }
 
