@@ -1,3 +1,5 @@
 # Project rules
 
 - Keep bulky offline visual capture JSON compressed as `.json.gz`, restoring it only for reference analysis, so publishing does not load gigabytes of unused data; retain the introduction capture used by existing inspection scripts uncompressed.
+- Bind application authentication and service clients to the base Lovable Cloud configuration in Vite, ignoring legacy production overrides, because managed OAuth sessions must be validated by their issuing service.
+- Exclude OAuth credential fragments from product-route matching so opaque token contents cannot select a public page.
