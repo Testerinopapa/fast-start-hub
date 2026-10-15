@@ -78,11 +78,8 @@ function MainRouter() {
 
   // Returning users should open their workspace, not the marketing homepage.
   // Keep explicit public product pages available even when authenticated.
-  const isHomeEntry = currentProduct === 'outreach' && (
-    window.location.pathname === '/' ||
-    window.location.pathname === '/index.html' ||
-    ['/app-autogtm', '/app-autogtm/'].includes(window.location.pathname)
-  );
+  const homeEntryPaths = ['/', '/index.html', '/app-autogtm', '/app-autogtm/'];
+  const isHomeEntry = currentProduct === 'outreach' && homeEntryPaths.includes(window.location.pathname);
 
   useEffect(() => {
     if (isHomeEntry && !authLoading && session) {
