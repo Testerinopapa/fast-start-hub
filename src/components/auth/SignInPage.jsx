@@ -107,6 +107,26 @@ export default function SignInPage({ initialMode }) {
     return <EmailVerificationPage email={email} onBack={() => toggleMode('register')} />;
   }
 
+  const handleGoogleSignIn = async () => {
+    try {
+      setIsLoading(true);
+      setError('');
+      const result = await lovable.auth.signInWithOAuth('google', {
+        redirect_uri: window.location.origin,
+      });
+      if (result.error) {
+        setError(result.error.message || 'Could not sign in with Google.');
+        return;
+      }
+      if (result.redirected) return; // browser is heading to Google; onAuthStateChange picks it up on return
+      navigate(PRODUCT_ROUTES.AUTO_GTM);
+    } catch (err) {
+      setError(err.message || 'Could not sign in with Google.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleLinkedInSignIn = async () => {
     try {
       setIsLoading(true);
