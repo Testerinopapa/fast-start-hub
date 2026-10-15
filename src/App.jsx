@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import useAuthSession from './hooks/useAuthSession';
 import { NavigationProvider, useNavigation, PRODUCT_ROUTES } from './context/NavigationContext';
 import OutreachAgentPage from './components/outreach/OutreachAgentPage';
 import B2BPage from './components/b2b/B2BPage';
@@ -73,6 +74,26 @@ function NotFoundPage() {
 
 function MainRouter() {
   const { currentProduct, countrySlug, regionSlug, domain, navigate } = useNavigation();
+  const { session, loading: authLoading } = useAuthSession();
+
+  // Returning users should open their workspace, not the marketing homepage.
+  // Keep explicit public product pages available even when authenticated.
+  const isHomeEntry = currentProduct === 'outreach' && (
+    window.location.pathname === '/' ||
+    window.location.pathname === '/index.html' ||
+    /^\\/app-autogtm\\/?$/.test(window.location.pathname)
+  );
+
+  useEffect(() => {
+    if (isHomeEntry && !authLoading && session) {
+      navigate(PRODUCT_ROUTES.AUTO_GTM);
+    }
+  }, [isHomeEntry, authLoading, session, navigate]);
+
+  // Do not flash the landing page while an existing session is restored.
+  if (isHomeEntry && (authLoading || session)) {
+    return <div className="min-h-screen bg-[#090b0b]" aria-label="Loading your workspace" />;
+  }
 
   switch (currentProduct) {
     case 'app-auto-gtm':
