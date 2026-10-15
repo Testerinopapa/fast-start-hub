@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigation, PRODUCT_ROUTES } from '../../context/NavigationContext';
 import { supabase } from '../../integrations/supabase/client';
+import { lovable } from '../../integrations/lovable/index';
 import EmailVerificationPage from './EmailVerificationPage';
 
 export default function SignInPage({ initialMode }) {
@@ -105,6 +106,26 @@ export default function SignInPage({ initialMode }) {
   if (mode === 'verification-code') {
     return <EmailVerificationPage email={email} onBack={() => toggleMode('register')} />;
   }
+
+  const handleGoogleSignIn = async () => {
+    try {
+      setIsLoading(true);
+      setError('');
+      const result = await lovable.auth.signInWithOAuth('google', {
+        redirect_uri: window.location.origin,
+      });
+      if (result.error) {
+        setError(result.error.message || 'Could not sign in with Google.');
+        return;
+      }
+      if (result.redirected) return; // browser is heading to Google; onAuthStateChange picks it up on return
+      navigate(PRODUCT_ROUTES.AUTO_GTM);
+    } catch (err) {
+      setError(err.message || 'Could not sign in with Google.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleLinkedInSignIn = async () => {
     try {
@@ -236,6 +257,27 @@ export default function SignInPage({ initialMode }) {
             <span className="px-4 text-[13px] text-[#525252] select-none">or</span>
             <div className="flex-1 h-[1px] bg-white/[0.08]" />
           </div>
+
+          {/* Continue with Google */}
+          <button
+            type="button"
+            onClick={handleGoogleSignIn}
+            className="w-full h-[44px] rounded-[10px] bg-white/[0.04] hover:bg-white/[0.08] active:bg-white/[0.06] border border-white/[0.12] hover:border-white/20 flex items-center relative transition-all duration-150 cursor-pointer"
+          >
+            {/* Google Icon */}
+            <div className="absolute left-4 w-6 h-6 flex items-center justify-center">
+              <svg width="24" height="24" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M47.532 24.552C47.532 22.76 47.38 21.016 47.092 19.344H24.268V29.288H37.088C36.508 32.384 34.76 35.008 32.116 36.784V43.088H39.992C44.596 38.848 47.532 32.288 47.532 24.552Z" fill="#4285F4"/>
+                <path d="M24.268 48C31.124 48 36.86 45.712 39.992 43.088L32.116 36.784C29.956 38.248 27.316 39.12 24.268 39.12C18.356 39.12 13.356 35.16 11.572 29.776H3.42V36.272C6.532 42.424 12.9 48 24.268 48Z" fill="#34A853"/>
+                <path d="M11.572 29.776C11.14 28.488 10.884 27.112 10.884 25.688C10.884 24.264 11.14 22.888 11.572 21.6V15.104H3.42C1.948 18.064 1.092 21.808 1.092 25.688C1.092 29.568 1.948 33.312 3.42 36.272L11.572 29.776Z" fill="#FBBC05"/>
+                <path d="M24.268 12.256C27.62 12.256 30.612 13.408 32.964 15.632L39.812 8.784C35.852 5.112 31.116 3.4 24.268 3.4C12.9 3.4 6.532 8.976 3.42 15.104L11.572 21.6C13.356 16.216 18.356 12.256 24.268 12.256Z" fill="#EA4335"/>
+              </svg>
+            </div>
+            {/* Center label */}
+            <span className="w-full text-center text-[#fafafa] font-medium text-sm">
+              Continue with Google
+            </span>
+          </button>
 
           {/* Continue with LinkedIn */}
           <button
