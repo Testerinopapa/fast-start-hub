@@ -48,10 +48,13 @@ export function discoveryQueries(target: Target) {
     normalized(keyword) !== normalized(target.industry || ''));
   // Use short complementary searches, not an ICP paragraph or the same audience
   // repeated alongside every product keyword. At least one search is broad.
+  // Search for organizations that *are* the chosen buyers, not vendors publishing
+  // SEO pages such as "scheduling software for consultants". Keep the same
+  // three-search budget and avoid claiming a search result is a verified lead.
   return unique([
-    query([target.audience, target.locations[0]]),
-    query([target.industry || target.audience, keywords[0], target.locations[1] || target.locations[0]]),
-    query([target.industry || keywords[1] || keywords[0] || target.audience, target.locations[2] || target.locations[0]]),
+    query([keywords[0] || target.audience, 'firm practice company', target.locations[0], '-software -tools -template']),
+    query([keywords[1] || target.industry || target.audience, 'about team clients', target.locations[1] || target.locations[0], '-blog -guide']),
+    query([target.industry || target.audience, 'independent agency business', target.locations[2] || target.locations[0], '-directory -alternatives']),
   ]).filter(Boolean).slice(0, 3);
 }
 export function newDiscovery(target: Target, previous?: Discovery): Discovery {
@@ -68,6 +71,20 @@ function overlap(target: Target, text: string) {
   return { audience: matches(target.audience), industry: matches(target.industry || ''),
     keywords: matches(target.keywords.join(' ')), icp: matches(target.ideal_customer) };
 }
+// A marketing page mentioning an audience is not evidence that its operator
+// belongs to that audience. Evaluate context, not just repeated keywords.
+// This is a ranking signal only, never a declaration that the business is invalid.
+function supplierSignals(target: Target, text: string) {
+  const t = clean(text, 12000).toLowerCase();
+  const audience = terms([target.audience, target.industry || '', ...target.keywords].join(' '));
+  const audiencePresent = audience.some(term => t.includes(term));
+  if (!audiencePresent) return false;
+  return /\b(?:software|platform|tool|app|solution|website|booking|scheduling|crm|automation|marketing)\s+(?:for|built for|designed for)\b/i.test(t) ||
+    /\b(?:for|helping|help|serving|serve|built for|designed for)\s+(?:independent |small |solo |freelance )?(?:consultants?|coaches?|advisors?|agencies|clinics|therapists?|tutors?|professionals?)\b/i.test(t);
+}
+function buyerSignals(text: string) {
+  return /\b(?:our clients|our team|our practice|our consultancy|our consulting firm|our agency|we advise|we coach|we provide consulting|we work with clients|book a consultation)\b/i.test(text);
+}
 export function discoveryCandidates(state: Discovery, links: unknown, events: DiscoveryEvent[] = []): DiscoveryCandidate[] {
   const found = new Map(state.candidates.map(candidate => [candidate.domain, candidate]));
   for (const raw of (Array.isArray(links) ? links : []).slice(0, 8)) {
@@ -78,14 +95,18 @@ export function discoveryCandidates(state: Discovery, links: unknown, events: Di
         : /\.(pdf|zip|png|jpe?g|mp4)$/i.test(url.pathname) ? 'File result, not a company page' : '';
       if (rejection) { events.push({ type: 'candidate', outcome: 'rejected', domain, url: url.href, reason: rejection }); continue; }
       const match = overlap(state.criteria, `${clean(raw.title)} ${clean(raw.description)}`);
-      const relevance = match.audience.length * 4 + match.industry.length * 3 + match.keywords.length * 2 + Math.min(match.icp.length, 4);
+      const vendorPage = supplierSignals(state.criteria, `${clean(raw.title)} ${clean(raw.description)}`);
+      const relevance = Math.max(0, match.audience.length * 4 + match.industry.length * 3 +
+        match.keywords.length * 2 + Math.min(match.icp.length, 4) - (vendorPage ? 20 : 0));
       const previous = found.get(domain);
       const search = { search_title: clean(raw.title, 200), search_description: clean(raw.description) };
       if (previous) found.set(domain, { ...previous, ...(relevance > previous.relevance ? { ...search, url: url.href } : {}),
         relevance: Math.max(previous.relevance, relevance), discovery_urls: unique([...previous.discovery_urls, url.href]).slice(0, 3) });
       else found.set(domain, { domain, url: url.href, relevance, discovery_urls: [url.href], ...search });
       events.push({ type: 'candidate', outcome: previous ? 'duplicate' : 'retained', domain, url: url.href,
-        reason: previous ? 'Merged search evidence for an existing domain' : 'Search candidate retained pending website research' });
+        reason: previous ? 'Merged search evidence for an existing domain' : vendorPage
+          ? 'Vendor-facing page: retained with lower priority; audience mentions alone do not prove buyer fit'
+          : 'Search candidate retained pending website research' });
     } catch { events.push({ type: 'candidate', outcome: 'rejected', reason: 'Malformed or unsafe search URL' }); }
   }
   const ranked = [...found.values()].sort((a, b) => b.relevance - a.relevance || a.domain.localeCompare(b.domain));
@@ -157,10 +178,19 @@ export function enrichCompany(state: Discovery, candidate: DiscoveryCandidate, r
     const match = overlap(state.criteria, `${name || ''} ${description || ''} ${industry || ''} ${page.markdown}`);
     const requestedLocations = state.criteria.locations;
     const locationMatch = requestedLocations.some(value => normalized(location || '').includes(normalized(value)));
-    const score = match.audience.length * 4 + match.industry.length * 3 + match.keywords.length * 2 + Math.min(match.icp.length, 4) + (locationMatch ? 6 : 0);
+    // Use verified business fields for ranking; the entire webpage can contain
+    // testimonials, footer links or other people's audience descriptions.
+    const identityText = `${name || ''} ${description || ''} ${industry || ''}`;
+    const vendorPage = supplierSignals(state.criteria, identityText) &&
+      !buyerSignals(identityText);
+    const buyerPage = buyerSignals(identityText);
+    const score = Math.max(0, match.audience.length * 4 + match.industry.length * 3 +
+      match.keywords.length * 2 + Math.min(match.icp.length, 4) + (locationMatch ? 6 : 0) +
+      (buyerPage ? 8 : 0) - (vendorPage ? 25 : 0));
     const matched = unique([...match.audience, ...match.industry, ...match.keywords, ...match.icp]).slice(0, 8);
     const locationReason = !requestedLocations.length ? '' : locationMatch ? ' Target location appears in the source.' : ' Target location is unconfirmed; review before outreach.';
     if (!matched.length) notes.push('No exact campaign keyword overlap on the page; customer fit is unconfirmed.');
+    if (vendorPage) notes.push('The business appears to market products or services to this audience; it is not verified to be part of the audience.');
     const reason = websiteVerified ? 'Business page facts confirmed; missing fields remain empty and customer fit is assessed separately.'
       : 'Insufficient first-party identity evidence; candidate retained as unverified.';
     return { company: { ...initial, website: new URL(source).origin + '/', name, description: description || initial.description, industry, location,
@@ -168,9 +198,9 @@ export function enrichCompany(state: Discovery, candidate: DiscoveryCandidate, r
       field_sources: { ...(description ? { description: 'website' as const } : initial.field_sources?.description ? { description: initial.field_sources.description } : {}),
         ...(name ? { name: 'website' as const } : {}), ...(industry ? { industry: 'website' as const } : {}), ...(location ? { location: 'website' as const } : {}) },
       research_status: websiteVerified ? 'verified' : 'unverified', confidence: name && description ? 'high' : websiteVerified ? 'medium' : 'low',
-      enrichment_status: 'enriched', research_notes: [reason, ...notes], relevance_score: Math.max(score, candidate.relevance),
-      relevance: match.audience.length && (!requestedLocations.length || locationMatch) ? 'Stronger match' : matched.length ? 'Possible match' : 'Fit unconfirmed',
-      match_reason: `${matched.length ? `Page keyword overlap: ${matched.join(', ')}.` : 'Exact campaign terms were not found; this is not a confirmed customer match.'}${locationReason} Customer fit still needs review.` }, reason };
+      enrichment_status: 'enriched', research_notes: [reason, ...notes], relevance_score: vendorPage ? score : Math.max(score, candidate.relevance),
+      relevance: vendorPage ? 'Fit unconfirmed' : match.audience.length && buyerPage && (!requestedLocations.length || locationMatch) ? 'Stronger match' : matched.length ? 'Possible match' : 'Fit unconfirmed',
+      match_reason: `${vendorPage ? 'Vendor targeting this audience; not evidence the business belongs to the audience. ' : ''}${matched.length ? `Page keyword overlap: ${matched.join(', ')}.` : 'Exact campaign terms were not found; this is not a confirmed customer match.'}${locationReason} Customer fit still needs review.` }, reason };
   } catch { return unverified('Website response could not be interpreted safely; search candidate retained.'); }
 }
 export function verifiedCompany(state: Discovery, candidate: DiscoveryCandidate, raw: unknown): DiscoveredCompany | null {
