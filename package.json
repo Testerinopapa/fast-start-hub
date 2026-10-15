@@ -13,6 +13,7 @@
     "check:edge": "npx --yes deno@2.9.6 task --config supabase/functions/deno.json check"
   },
   "dependencies": {
+    "@lovable.dev/cloud-auth-js": "^1.1.2",
     "@supabase/supabase-js": "^2.117.2",
     "clsx": "^2.1.1",
     "lucide-react": "^0.474.0",
