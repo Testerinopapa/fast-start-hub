@@ -2,8 +2,12 @@
 import { createClient } from '@supabase/supabase-js';
 import { brokeredPreviewStorage } from './previewAuthStorage';
 
-const SUPABASE_URL = import.meta.env.VITE_AUTH_SUPABASE_URL;
-const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_AUTH_SUPABASE_PUBLISHABLE_KEY;
+// This app authenticates against the original Explee login project.
+// Hosted builders can override VITE_AUTH_* variables with a different Supabase
+// project; using those values would produce tokens rejected by research APIs.
+// These are public client settings, not service-role credentials.
+const SUPABASE_URL = 'https://hpkmrpezybhtyjcsxfiq.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_E9CgSpjaEMAFyOmMRYoaPg_omf93u6I';
 
 
 function isNewSupabaseApiKey(value: string): boolean {
