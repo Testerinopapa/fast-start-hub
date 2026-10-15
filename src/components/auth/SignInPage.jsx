@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigation, PRODUCT_ROUTES } from '../../context/NavigationContext';
 import { supabase } from '../../integrations/supabase/client';
+import { lovable } from '../../integrations/lovable/index';
 import EmailVerificationPage from './EmailVerificationPage';
 
 export default function SignInPage({ initialMode }) {
