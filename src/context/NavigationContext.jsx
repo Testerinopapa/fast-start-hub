@@ -20,7 +20,11 @@ export const PRODUCT_ROUTES = {
 // Map URL paths or hashes to product IDs
 export function resolveProductFromLocation() {
   const pathname = window.location.pathname.toLowerCase();
-  const hash = window.location.hash.toLowerCase();
+  const hashParams = new URLSearchParams(window.location.hash.slice(1));
+  // OAuth credentials are not navigation fragments. Token substrings can
+  // otherwise accidentally match public products such as "gm" or "api".
+  const isAuthCallback = hashParams.has('access_token') || hashParams.has('error_description');
+  const hash = isAuthCallback ? '' : window.location.hash.toLowerCase();
 
   // 0a. Verification code (/register/verification-code, /verification-code, /verify-email)
   if (

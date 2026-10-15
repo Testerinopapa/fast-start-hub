@@ -119,6 +119,10 @@ export default function SignInPage({ initialMode }) {
         return;
       }
       if (result.redirected) return; // browser is heading to Google; onAuthStateChange picks it up on return
+      const { data, error: sessionError } = await supabase.auth.getUser();
+      if (sessionError || !data.user) {
+        throw sessionError || new Error('Google sign-in did not establish a session. Please try again.');
+      }
       navigate(PRODUCT_ROUTES.AUTO_GTM);
     } catch (err) {
       setError(err.message || 'Could not sign in with Google.');
