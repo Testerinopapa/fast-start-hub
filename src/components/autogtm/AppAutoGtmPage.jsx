@@ -3,6 +3,7 @@ import { useNavigation } from '../../context/NavigationContext';
 import AutoGtmNavigation from './AutoGtmNavigation';
 import CrispChatWidget from './CrispChatWidget';
 import useAuthSession from '../../hooks/useAuthSession';
+import { ensureGuestSession } from '../../lib/guestSession';
 import { normalizeWebsite, requestedWebsite } from '../../lib/companyResearch';
 
 export default function AppAutoGtmPage() {
@@ -10,17 +11,20 @@ export default function AppAutoGtmPage() {
   const { session, loading: authLoading } = useAuthSession();
   const [domain, setDomain] = useState(() => requestedWebsite() || 'keethub.lovable.app');
   const [error, setError] = useState('');
+  const [starting, setStarting] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (authLoading) return;
+    if (authLoading || starting) return;
     try {
       const normalized = normalizeWebsite(domain);
       sessionStorage.setItem('autogtm-pending-domain', normalized.website);
-      if (!session) { navigate('/sign-in'); return; }
+      setStarting(true);
+      await ensureGuestSession();
       // Open the original animation immediately; its data hook starts the job.
       navigate(`/auto-gtm/company/${encodeURIComponent(normalized.domain)}/explore?src=cabinet&phase=research_company_loading`);
     } catch (err) { setError(err.message); }
+    finally { setStarting(false); }
   };
 
   return (
@@ -70,7 +74,7 @@ export default function AppAutoGtmPage() {
 
               <button
                 type="submit"
-                disabled={authLoading}
+                disabled={authLoading || starting}
                 className="min-h-11 px-4 rounded-lg bg-[#0d9467] hover:bg-[#0a7854] active:scale-[0.98] text-white text-sm font-semibold inline-flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer shrink-0"
               >
                 <span>Create my project</span>
