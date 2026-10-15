@@ -2,8 +2,11 @@ import { supabase } from '../integrations/supabase/client';
 
 // Public research-project configuration must also work in Vite development and
 // hosted previews (which do not load .env.production).
-const RESEARCH_URL = import.meta.env.VITE_SUPABASE_URL || 'https://cvpeezzkzsbosyuhmhmf.supabase.co';
-const RESEARCH_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_WMPZN3mwjyDl5fyGlVniJA_qUq5_mRB';
+// Research lives in a separate Supabase project from authentication.
+// Lovable may inject its own VITE_SUPABASE_URL at build time, so that
+// variable must never decide which project handles research operations.
+const RESEARCH_URL = 'https://cvpeezzkzsbosyuhmhmf.supabase.co';
+const RESEARCH_KEY = 'sb_publishable_WMPZN3mwjyDl5fyGlVniJA_qUq5_mRB';
 
 export function normalizeWebsite(value) {
   let url;
