@@ -81,7 +81,7 @@ function MainRouter() {
   const isHomeEntry = currentProduct === 'outreach' && (
     window.location.pathname === '/' ||
     window.location.pathname === '/index.html' ||
-    /^\\/app-autogtm\\/?$/.test(window.location.pathname)
+    ['/app-autogtm', '/app-autogtm/'].includes(window.location.pathname)
   );
 
   useEffect(() => {
