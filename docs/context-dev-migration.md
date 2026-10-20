@@ -56,10 +56,22 @@ supabase functions deploy company-discovery --project-ref cvpeezzkzsbosyuhmhmf
 supabase functions deploy people-discovery --project-ref cvpeezzkzsbosyuhmhmf
 ```
 
-Publish the frontend for the new polling interval. After all consumers use the
-new functions, remove the hosted `firecrawl-webhook` function and obsolete
-`FIRECRAWL_API_KEY` secret. Deleting local source does not remove hosted functions
-or secrets. No hosted configuration or deployment was changed during this task.
+Publish the frontend for the new polling interval. Verify all six deployed
+functions with `supabase functions list --project-ref cvpeezzkzsbosyuhmhmf`,
+then perform a signed-in, end-to-end Context.dev research run and inspect errors
+in Edge Function logs. A successful upload alone does not verify provider access.
+
+Once the live workflow succeeds, retire the previous provider's hosted assets
+from the **research** project (not the separate authentication project):
+
+```powershell
+npx supabase functions delete firecrawl-webhook --project-ref cvpeezzkzsbosyuhmhmf
+npx supabase secrets unset FIRECRAWL_API_KEY --project-ref cvpeezzkzsbosyuhmhmf
+```
+
+Deleting source code from GitHub does not delete hosted functions or secrets.
+Do not run these cleanup commands until the replacement pipeline is verified.
+No provider secret should ever be committed to this repository.
 
 ## Verification
 

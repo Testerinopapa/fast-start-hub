@@ -11,7 +11,7 @@ Keep `CONTEXT_DEV_API_KEY` server-side. Local values are in ignored
 All requests pass through `supabase/functions/_shared/context-dev.ts`.
 The existing authenticated discovery endpoint, budget reservations, candidate
 ranking, saved results and website evidence verification remain in use.
-Website enrichment still uses Firecrawl or the configured Crawl4AI provider.
+Website enrichment was subsequently migrated to Context.dev. See [Context.dev migration](context-dev-migration.md) for the current implementation.
 No hosted secrets or functions were deployed during this evaluation.
 
 ## One real request

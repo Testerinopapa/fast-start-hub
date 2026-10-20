@@ -2,7 +2,7 @@
 
 # Phase 5: broader professional sources
 
-Prepared locally; not deployed. Keep the existing Supabase/Firecrawl integrations and Phase 5 table. Apply the incremental migration and redeploy only `people-discovery` after approval.
+Prepared locally; not deployed. Reuse the existing Supabase integration and Phase 5 table. Apply the incremental migration and redeploy only `people-discovery` after approval.
 
 ## Observed failure
 
@@ -30,7 +30,7 @@ Public evidence demonstrates why a domain-only search is insufficient for YouTub
 
 ## Budget and old results
 
-The cumulative cap is two searches (five search results each), four page requests, and ten saved contacts per domain; at most ten domains per research job. A supported shortlist can complete after the first search/two pages. JSON extraction uses the existing Firecrawl allowance; these are request limits, not a claim that extraction is free.
+The cumulative cap is two searches (five search results each), four page requests, and ten saved contacts per domain; at most ten domains per research job. A supported shortlist can complete after the first search/two pages. JSON extraction consumes provider requests; these are request limits, not a claim that extraction is free.
 
 Previously completed empty runs are upgraded once on load and reopened for a broader search if there is unused allowance under the new cap. Old reservations and page history are preserved: a run that already spent one search/two pages gets at most one additional search/two pages. Nonempty cached runs are retained without automatic repeat research. Failed runs keep their recovery controls. Neither refreshes nor concurrent tabs reset budgets.
 
@@ -55,4 +55,4 @@ npx supabase@2.120.0 functions deploy people-discovery --project-ref cvpeezzkzsb
 
 Publish the frontend through the existing Lovable/Git workflow. No changes to auth providers, secrets, or unrelated functions are required.
 
-Investigation used source inspection, read-only stored-state queries, and public official sources. No remote deployment, live Firecrawl request, test script or build was run. Successful end-to-end extraction remains unverified until an approved deployment and live run.
+Investigation used source inspection, read-only stored-state queries, and public official sources. No remote deployment, live provider request, test script or build was run. Successful end-to-end extraction remains unverified until an approved deployment and live run.

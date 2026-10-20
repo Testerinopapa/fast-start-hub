@@ -24,10 +24,9 @@ npx supabase@2.120.0 db push --linked --dry-run
 npx supabase@2.120.0 db push --linked
 npx supabase@2.120.0 functions deploy campaigns --project-ref cvpeezzkzsbosyuhmhmf --use-api
 npx supabase@2.120.0 functions deploy competitor-research --project-ref cvpeezzkzsbosyuhmhmf --use-api
-npx supabase@2.120.0 functions deploy firecrawl-webhook --project-ref cvpeezzkzsbosyuhmhmf --use-api
 ```
 
-The webhook also runs competitor ranking, so it needs the same shared-code update. Publish the frontend through the existing workflow.
+The retired callback is no longer deployed. Publish the frontend through the existing workflow. For current provider deployment, follow [Context.dev migration](context-dev-migration.md).
 
 After deployment, the existing empty competitor project needs its explicit retry to use the corrected queries. Phase 3 needs **Regenerate suggestions** because its automatic attempt has already been consumed. If that request fails, the new error category identifies the next action; do not claim that the old generic connection failure has been conclusively diagnosed.
 
