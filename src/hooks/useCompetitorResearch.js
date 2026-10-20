@@ -25,12 +25,12 @@ export default function useCompetitorResearch(jobId, projectId, userId, enabled)
         setSnapshot({ jobId, userId, data });
         setFailure(data.status === 'failed' ? { jobId, userId, error: Object.assign(new Error(data.error || 'Competitor research could not finish.'), { canRetry: data.can_retry }) } : null);
         failures = 0;
-        if (!['completed', 'failed'].includes(data.status)) timer = setTimeout(() => poll(), 5000);
+        if (!['completed', 'failed'].includes(data.status)) timer = setTimeout(() => poll(), 10000);
       } catch (error) {
         if (!active || error.name === 'AbortError') return;
         setFailure({ jobId, userId, error });
         if (!['UNAUTHORIZED', 'NOT_FOUND', 'PROJECT_MISMATCH', 'INSUFFICIENT_PROFILE'].includes(error.code) && failures++ < 4) {
-          timer = setTimeout(() => poll(), Math.min(30000, 5000 * 2 ** failures));
+          timer = setTimeout(() => poll(), Math.min(30000, 10000 * 2 ** failures));
         }
       }
     };

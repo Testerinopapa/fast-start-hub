@@ -104,7 +104,7 @@ export const extractionFormat = {
 
 type Fact = { name: string; description: string | null; source_urls: string[]; kind?: string };
 type Description = { text: string; source_urls: string[] };
-export type ScrapedPage = { metadata?: { sourceURL?: string; url?: string; statusCode?: number }; json?: Record<string, unknown> };
+export type ScrapedPage = { markdown?: string; metadata?: { title?: string; sourceURL?: string; url?: string; statusCode?: number }; json?: Record<string, unknown> };
 const clean = (value: unknown, max = 3000) => typeof value === 'string' ? value.trim().slice(0, max) || null : null;
 
 export function buildProfile(pages: ScrapedPage[], selected: string[]) {
@@ -155,12 +155,4 @@ export function buildProfile(pages: ScrapedPage[], selected: string[]) {
   return { company_name: companyName, business_description: descriptions[0]?.text ?? null, descriptions,
     ...collections, source_urls: sources, warnings: sources.length < selected.length
       ? [`Usable facts were found on ${sources.length} of ${selected.length} selected pages. Other pages were unavailable or contained no company facts.`] : [] };
-}
-
-export function safeNextPage(value: string, providerId: string): string {
-  const url = new URL(value);
-  if (url.origin !== 'https://api.firecrawl.dev' || url.pathname !== `/v2/batch/scrape/${providerId}` || url.username || url.password) {
-    throw new ResearchError('PROVIDER_RESPONSE', 'The research provider returned an invalid result URL.', 502);
-  }
-  return url.pathname + url.search;
 }

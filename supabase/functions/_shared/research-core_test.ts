@@ -1,5 +1,5 @@
 import { strict as assert } from 'node:assert';
-import { buildProfile, companyUrl, domainOf, safeNextPage, selectPages } from './research-core.ts';
+import { buildProfile, companyUrl, domainOf, selectPages } from './research-core.ts';
 import { businessDomain, collectCandidates, competitorQueries, rankCompetitors, type CompanyProfile } from './competitor-core.ts';
 
 const profile = { company_name: 'PrimKeet', business_description: 'English vocabulary learning games',
@@ -85,9 +85,3 @@ Deno.test('empty/malformed extraction cannot become a successful profile', () =>
   assert.throws(() => buildProfile([{ metadata: { sourceURL: 'https://company.com/' }, json: { company_name: 'Company' } }], ['https://company.com/']));
   assert.throws(() => buildProfile([{ metadata: { sourceURL: 'https://company.com/', url: 'https://external.com/' }, json: { business_description: 'Wrong site' } }], ['https://company.com/']));
 });
-Deno.test('pagination cannot leak the provider key to another origin or job', () => {
-  assert.equal(safeNextPage('https://api.firecrawl.dev/v2/batch/scrape/job?skip=2', 'job'), '/v2/batch/scrape/job?skip=2');
-  for (const url of ['https://evil.com/v2/batch/scrape/job', 'https://api.firecrawl.dev/v2/batch/scrape/other', 'http://api.firecrawl.dev/v2/batch/scrape/job']) assert.throws(() => safeNextPage(url, 'job'));
-});
-
-

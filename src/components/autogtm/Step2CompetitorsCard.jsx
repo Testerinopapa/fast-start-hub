@@ -104,7 +104,7 @@ export default function Step2CompetitorsCard({
                 {error || 'No competitors with enough supporting evidence were found within this search limit.'}
                 {!error && warnings.map(warning => <p key={warning} className="mt-2">{warning}</p>)}
                 {onRetry && <button type="button" onClick={onRetry}
-                  title="Starts one new search, limited to 3 searches and 10 competitor websites. Uses Firecrawl credits."
+                  title="Starts one new search, limited to 3 searches and 10 competitor websites. Uses research credits."
                   className="mt-3 text-xs px-3 py-1.5 rounded-lg border border-black/10 bg-white text-gray-600 shadow-2xs">Retry competitor research</button>}
               </div>
             )}

@@ -1,0 +1,1612 @@
+{
+  "format": "autogtm.project-export",
+  "schema_version": 1,
+  "exported_at": "2026-10-20T01:29:45.538Z",
+  "scope": {
+    "research_job_id": "5668a6b6-602a-413c-b319-b03ac04db13b",
+    "saved_results_only": true,
+    "notes": [
+      "Contains the selected research job and all of its saved campaigns and discovery results, not other research jobs for this website.",
+      "Missing stages are absent or null; unfinished stages retain their saved status. No research was started or retried for this export.",
+      "Project-level campaign_generation identifies the job used by the latest generation attempt, which may differ from this exported job.",
+      "Records were read independently; a workflow running in another tab may change them during export.",
+      "Includes saved diagnostics only, not Edge Function console logs or raw provider responses."
+    ]
+  },
+  "project": {
+    "id": "58bc6909-55c6-4b5f-b9da-9157698b77aa",
+    "domain": "hubspot.com",
+    "website_url": "https://hubspot.com/",
+    "created_at": "2026-10-20T01:26:32.362982+00:00",
+    "updated_at": "2026-10-20T01:27:11.152049+00:00",
+    "campaign_generation": {
+      "error": null,
+      "model": "openrouter/free",
+      "job_id": "5668a6b6-602a-413c-b319-b03ac04db13b",
+      "status": "completed",
+      "attempts": 1,
+      "request_id": "6d916d27-1ce8-4bea-9c86-ca92b5f4a309",
+      "started_at": "2026-10-20T01:28:33.271734+00:00",
+      "finished_at": "2026-10-20T01:29:21.725443+00:00",
+      "auto_attempted": true
+    }
+  },
+  "job": {
+    "id": "5668a6b6-602a-413c-b319-b03ac04db13b",
+    "project_id": "58bc6909-55c6-4b5f-b9da-9157698b77aa",
+    "status": "completed",
+    "provider_job_id": "01a156ea-f370-72d8-b1de-2396420c560f",
+    "selected_urls": [
+      "https://hubspot.com/",
+      "https://www.hubspot.com/company/management/alison-elworthy",
+      "https://www.hubspot.com/products/marketing/seo",
+      "https://www.hubspot.com/pricing/marketing",
+      "https://www.hubspot.com/integrations/eventbrite/case-study",
+      "https://www.hubspot.com/company/advisory-board/jerry-dischler",
+      "https://www.hubspot.com/company/board-of-directors/mike-redbord-vp-services-and-support",
+      "https://www.hubspot.com/services/premium-support",
+      "https://www.hubspot.com/products/sales/sales-leads",
+      "https://www.hubspot.com/products/sales/sales-reports"
+    ],
+    "pages_completed": 9,
+    "error_code": null,
+    "error_message": null,
+    "created_at": "2026-10-20T01:26:32.362982+00:00",
+    "updated_at": "2026-10-20T01:27:11.152049+00:00",
+    "finished_at": "2026-10-20T01:27:11.152049+00:00"
+  },
+  "profile": {
+    "id": "5c1517bf-f70e-4fe8-87f8-211072655f7b",
+    "project_id": "58bc6909-55c6-4b5f-b9da-9157698b77aa",
+    "job_id": "5668a6b6-602a-413c-b319-b03ac04db13b",
+    "company_name": "HubSpot",
+    "business_description": "HubSpot is a young company that specializes in providing a strong culture and support for scaling and growth.",
+    "descriptions": [
+      {
+        "text": "HubSpot is a young company that specializes in providing a strong culture and support for scaling and growth.",
+        "source_urls": [
+          "https://www.hubspot.com/company/management/alison-elworthy"
+        ]
+      },
+      {
+        "text": "HubSpot provides marketing software that helps businesses improve their SEO, content strategies, and overall digital marketing efforts.",
+        "source_urls": [
+          "https://www.hubspot.com/products/marketing/seo"
+        ]
+      },
+      {
+        "text": "HubSpot (NYSE: HUBS) is a public company.",
+        "source_urls": [
+          "https://www.hubspot.com/company/board-of-directors/mike-redbord-vp-services-and-support"
+        ]
+      },
+      {
+        "text": "HubSpot offers AI-powered lead management software and automation for sales teams, helping them to capture, qualify, and nurture prospects.",
+        "source_urls": [
+          "https://www.hubspot.com/products/sales/sales-leads"
+        ]
+      },
+      {
+        "text": "HubSpot provides sales reporting software integrated into a unified and centralized Smart CRM. This software helps sales teams gain real-time performance metrics and customizable reports.",
+        "source_urls": [
+          "https://www.hubspot.com/products/sales/sales-reports"
+        ]
+      }
+    ],
+    "products": [
+      {
+        "name": "SEO Marketing Software",
+        "description": "Build your authority in search with tools that help you plan your SEO strategy, optimize your content, and measure ROI.",
+        "source_urls": [
+          "https://www.hubspot.com/products/marketing/seo"
+        ]
+      },
+      {
+        "name": "Marketing Hub",
+        "description": "Generate leads and automate marketing that drives growth",
+        "source_urls": [
+          "https://www.hubspot.com/pricing/marketing"
+        ]
+      },
+      {
+        "name": "HubSpot Credits",
+        "description": "Power features and agents that do work for you",
+        "source_urls": [
+          "https://www.hubspot.com/pricing/marketing"
+        ]
+      },
+      {
+        "name": "AEO",
+        "description": "See how your business shows up in answer engines",
+        "source_urls": [
+          "https://www.hubspot.com/pricing/marketing"
+        ]
+      },
+      {
+        "name": "Sales Hub",
+        "description": "Lead Management & Prospecting Software",
+        "source_urls": [
+          "https://www.hubspot.com/products/sales/sales-leads",
+          "https://www.hubspot.com/products/sales/sales-reports"
+        ]
+      },
+      {
+        "name": "Sales Reporting & Performance Management Software",
+        "description": "Analyze and visualize your sales data with sales reporting software — deliver insights and empower your team to optimize strategy and hit targets.",
+        "source_urls": [
+          "https://www.hubspot.com/products/sales/sales-reports"
+        ]
+      },
+      {
+        "name": "Free Meeting Scheduler",
+        "description": "Add a meeting scheduler link to your website and emails to book more appointments.",
+        "source_urls": [
+          "https://www.hubspot.com/products/sales/sales-reports"
+        ]
+      },
+      {
+        "name": "Free Email Tracking Software",
+        "description": "Get notified when leads open your emails so you can close more deals with timely follow-ups.",
+        "source_urls": [
+          "https://www.hubspot.com/products/sales/sales-reports"
+        ]
+      },
+      {
+        "name": "Sales Automation Tools",
+        "description": "Automate lead rotation, follow-ups, and more with workflows and sequences that drive efficiency.",
+        "source_urls": [
+          "https://www.hubspot.com/products/sales/sales-reports"
+        ]
+      },
+      {
+        "name": "Contact Management Software",
+        "description": "Keep your CRM records up to date with ease. Add contacts and log activity with a single click.",
+        "source_urls": [
+          "https://www.hubspot.com/products/sales/sales-reports"
+        ]
+      },
+      {
+        "name": "Forecasting Software",
+        "description": "Inspect deals to make sure your team is on track with a holistic view of your pipeline.",
+        "source_urls": [
+          "https://www.hubspot.com/products/sales/sales-reports"
+        ]
+      },
+      {
+        "name": "Free Email Template Builder",
+        "description": "Scale your sales efforts by leveraging and creating conversion-ready email templates.",
+        "source_urls": [
+          "https://www.hubspot.com/products/sales/sales-reports"
+        ]
+      },
+      {
+        "name": "Document Tracking",
+        "description": "Build a library of sales content for your team to share, and track which documents close deals.",
+        "source_urls": [
+          "https://www.hubspot.com/products/sales/sales-reports"
+        ]
+      },
+      {
+        "name": "Call Tracking Software",
+        "description": "Track, prioritize, and make calls directly from your browser to maximize efficiency.",
+        "source_urls": [
+          "https://www.hubspot.com/products/sales/sales-reports"
+        ]
+      },
+      {
+        "name": "Lead Management & Prospecting Software",
+        "description": "Track and get notified when a lead visits your website, then follow up flawlessly.",
+        "source_urls": [
+          "https://www.hubspot.com/products/sales/sales-reports"
+        ]
+      },
+      {
+        "name": "Predictive Lead Scoring Software",
+        "description": "Prioritize the accounts and leads that are most likely to close with automated lead scoring.",
+        "source_urls": [
+          "https://www.hubspot.com/products/sales/sales-reports"
+        ]
+      },
+      {
+        "name": "Free Pipeline Management Software",
+        "description": "Visualize your entire sales cycle in an easy-to-follow pipeline to prioritize leads and close more deals.",
+        "source_urls": [
+          "https://www.hubspot.com/products/sales/sales-reports"
+        ]
+      },
+      {
+        "name": "Custom Objects",
+        "description": "Add custom fields to your HubSpot Smart CRM to automate workflows and dive deeper into your data.",
+        "source_urls": [
+          "https://www.hubspot.com/products/sales/sales-reports"
+        ]
+      },
+      {
+        "name": "Payment Links",
+        "description": "Transform your customers' buying experience with natively built, CRM-powered payments.",
+        "source_urls": [
+          "https://www.hubspot.com/products/sales/sales-reports"
+        ]
+      },
+      {
+        "name": "Quote Software",
+        "description": "Create and send sales quotes, collect electronic signatures, and receive payments from the same place you manage your deals.",
+        "source_urls": [
+          "https://www.hubspot.com/products/sales/sales-reports"
+        ]
+      },
+      {
+        "name": "AI Email Writer",
+        "description": "Write emails in a fraction of the time using HubSpot's AI email writer.",
+        "source_urls": [
+          "https://www.hubspot.com/products/sales/sales-reports"
+        ]
+      },
+      {
+        "name": "AI Paragraph Rewriter",
+        "description": "Easily generate, edit, and repurpose copy with an AI paragraph rewriter.",
+        "source_urls": [
+          "https://www.hubspot.com/products/sales/sales-reports"
+        ]
+      },
+      {
+        "name": "CRM Customization",
+        "description": "Easily map your specific data model to your HubSpot Smart CRM.",
+        "source_urls": [
+          "https://www.hubspot.com/products/sales/sales-reports"
+        ]
+      },
+      {
+        "name": "Sales Playbook Software",
+        "description": "Help your team close more deals with competitive battlecards, conversion-ready scripts, and more.",
+        "source_urls": [
+          "https://www.hubspot.com/products/sales/sales-reports"
+        ]
+      },
+      {
+        "name": "Free Chatbot Builder",
+        "description": "Qualify leads, book meetings, provide customer support, and scale one-to-one conversations with chatbots.",
+        "source_urls": [
+          "https://www.hubspot.com/products/sales/sales-reports"
+        ]
+      },
+      {
+        "name": "Conversation Intelligence",
+        "description": "Provide better coaching for your team using insights from customer calls directly from your HubSpot CRM.",
+        "source_urls": [
+          "https://www.hubspot.com/products/sales/sales-reports"
+        ]
+      },
+      {
+        "name": "VoIP Software",
+        "description": "Make calls from inside HubSpot and enjoy automated call recording and logging.",
+        "source_urls": [
+          "https://www.hubspot.com/products/sales/sales-reports"
+        ]
+      },
+      {
+        "name": "ABM Software",
+        "description": "Unite your marketing and sales teams with collaborative tools for account-based buying.",
+        "source_urls": [
+          "https://www.hubspot.com/products/sales/sales-reports"
+        ]
+      },
+      {
+        "name": "Free Business Card Scanner App",
+        "description": "Turn business cards into CRM contacts in seconds, and leave manual data entry in the past.",
+        "source_urls": [
+          "https://www.hubspot.com/products/sales/sales-reports"
+        ]
+      },
+      {
+        "name": "HubSpot Mobile App",
+        "description": "Continue growing your business on the go with the free HubSpot mobile app.",
+        "source_urls": [
+          "https://www.hubspot.com/products/sales/sales-reports"
+        ]
+      },
+      {
+        "name": "Prospecting Agent",
+        "description": "Build a qualified sales pipeline with an AI-powered prospecting agent that researches and delivers personalized outreach strategies.",
+        "source_urls": [
+          "https://www.hubspot.com/products/sales/sales-reports"
+        ]
+      },
+      {
+        "name": "AI Guided Selling Software",
+        "description": "Leverage the power of AI to give sales teams the tools and guidance to create more pipeline and win more deals.",
+        "source_urls": [
+          "https://www.hubspot.com/products/sales/sales-reports"
+        ]
+      }
+    ],
+    "customers": [
+      {
+        "kind": "named_customer",
+        "name": "New customers",
+        "description": "Eligible for special Starter pricing and offers",
+        "source_urls": [
+          "https://www.hubspot.com/pricing/marketing"
+        ]
+      },
+      {
+        "kind": "named_customer",
+        "name": "Sandler Training",
+        "description": "We’re getting greater insights into prospects and their behavior, which helps us prepare for meetings and get ahead of any issues that might be developing.",
+        "source_urls": [
+          "https://www.hubspot.com/products/sales/sales-reports"
+        ]
+      }
+    ],
+    "locations": [],
+    "source_urls": [
+      "https://www.hubspot.com/company/management/alison-elworthy",
+      "https://www.hubspot.com/products/marketing/seo",
+      "https://www.hubspot.com/pricing/marketing",
+      "https://www.hubspot.com/company/board-of-directors/mike-redbord-vp-services-and-support",
+      "https://www.hubspot.com/products/sales/sales-leads",
+      "https://www.hubspot.com/products/sales/sales-reports"
+    ],
+    "warnings": [
+      "Usable facts were found on 6 of 10 selected pages. Other pages were unavailable or contained no company facts."
+    ],
+    "created_at": "2026-10-20T01:27:11.152049+00:00",
+    "competitor_research": {
+      "error": null,
+      "status": "completed",
+      "queries": [
+        "appointment scheduling software platforms -inurl:blog -inurl:alternatives -inurl:learn -site:quora.com -site:reddit.com",
+        "appointment scheduling software business teams providers -inurl:blog -inurl:alternatives -inurl:learn -site:quora.com -site:reddit.com",
+        "\"HubSpot\" alternatives"
+      ],
+      "results": [
+        {
+          "name": "BestDoc",
+          "domain": "bestdoc.com",
+          "pricing": [
+            {
+              "name": "BestDoc Pricing",
+              "description": "BestDoc pricing is public and flat: $250 per provider per month or $450 per facility per month.",
+              "source_urls": [
+                "https://bestdoc.com/best-medical-appointment-scheduling-software/"
+              ],
+              "evidence_quote": "BestDoc pricing is public and flat: $250 per provider per month or $450 per facility per month."
+            }
+          ],
+          "features": [
+            {
+              "name": "Online Booking",
+              "description": "Online booking from the clinic website with appointment rules that match real provider availability.",
+              "source_urls": [
+                "https://bestdoc.com/best-medical-appointment-scheduling-software/"
+              ],
+              "evidence_quote": "Online booking from the clinic website with appointment rules that match real provider availability."
+            },
+            {
+              "name": "Patient Communication Tools",
+              "description": "Schedule and patient communication tools for confirmations, reminders, and follow-up workflows.",
+              "source_urls": [
+                "https://bestdoc.com/best-medical-appointment-scheduling-software/"
+              ],
+              "evidence_quote": "Schedule and patient communication tools for confirmations, reminders, and follow-up workflows."
+            },
+            {
+              "name": "Waitlist Management",
+              "description": "Waitlist management to help fill cancellations and recover open time.",
+              "source_urls": [
+                "https://bestdoc.com/best-medical-appointment-scheduling-software/"
+              ],
+              "evidence_quote": "Waitlist management to help fill cancellations and recover open time."
+            },
+            {
+              "name": "Payments and Documentation Workflows",
+              "description": "Payments and documentation workflows for clinics that want booking and operations closer together.",
+              "source_urls": [
+                "https://bestdoc.com/best-medical-appointment-scheduling-software/"
+              ],
+              "evidence_quote": "Payments and documentation workflows for clinics that want booking and operations closer together."
+            },
+            {
+              "name": "Practice-Growth Features",
+              "description": "Practice-growth features that connect patient demand to bookable appointments.",
+              "source_urls": [
+                "https://bestdoc.com/best-medical-appointment-scheduling-software/"
+              ],
+              "evidence_quote": "Practice-growth features that connect patient demand to bookable appointments."
+            }
+          ],
+          "products": [
+            {
+              "name": "BestDoc",
+              "description": "BestDoc is built for medical practices that need more than a public appointment page.",
+              "source_urls": [
+                "https://bestdoc.com/best-medical-appointment-scheduling-software/"
+              ],
+              "evidence_quote": "BestDoc is built for medical practices that need more than a public appointment page."
+            }
+          ],
+          "customers": [],
+          "description": null,
+          "source_urls": [
+            "https://bestdoc.com/best-medical-appointment-scheduling-software/"
+          ],
+          "relationship": "direct",
+          "ranking_reason": "Same evidenced product category: appointment scheduling software. Customer overlap is unknown; missing customer lists do not rule out product competition.",
+          "relevance_score": 80
+        },
+        {
+          "name": "Lunacal",
+          "domain": "lunacal.ai",
+          "pricing": [
+            {
+              "name": "Standard",
+              "description": "Standard: $9 per user per month billed annually, or $10 on monthly billing.",
+              "source_urls": [
+                "https://lunacal.ai/blogs/best-appointment-booking-software"
+              ],
+              "evidence_quote": "Standard: $9 per user per month billed annually, or $10 on monthly billing."
+            },
+            {
+              "name": "Teams",
+              "description": "Teams: Currently displayed at $15 per user per month in both billing views.",
+              "source_urls": [
+                "https://lunacal.ai/blogs/best-appointment-booking-software"
+              ],
+              "evidence_quote": "Teams: Currently displayed at $15 per user per month in both billing views."
+            },
+            {
+              "name": "Enterprise",
+              "description": "Enterprise: $25 per user per month billed annually, or $30 on monthly billing.",
+              "source_urls": [
+                "https://lunacal.ai/blogs/best-appointment-booking-software"
+              ],
+              "evidence_quote": "Enterprise: $25 per user per month billed annually, or $30 on monthly billing."
+            }
+          ],
+          "features": [],
+          "products": [
+            {
+              "name": "Lunacal",
+              "description": "Lunacal - Ideal for small businesses looking for appointment booking solution.",
+              "source_urls": [
+                "https://lunacal.ai/blogs/best-appointment-booking-software"
+              ],
+              "evidence_quote": "Lunacal - Ideal for small businesses looking for appointment booking solution."
+            }
+          ],
+          "customers": [],
+          "description": "Lunacal lets you add service information and branding to the booking page before visitors choose a time.",
+          "source_urls": [
+            "https://lunacal.ai/blogs/best-appointment-booking-software"
+          ],
+          "relationship": "direct",
+          "ranking_reason": "Same evidenced product category: appointment scheduling software. Customer overlap is unknown; missing customer lists do not rule out product competition.",
+          "relevance_score": 80
+        },
+        {
+          "name": "Qmatic",
+          "domain": "qmatic.com",
+          "pricing": [],
+          "features": [],
+          "products": [],
+          "customers": [],
+          "description": "An appointment scheduling system is a software that helps businesses and organizations manage their booked appointments and needed resources in an efficient way.",
+          "source_urls": [
+            "https://www.qmatic.com/resources/appointment-scheduling"
+          ],
+          "relationship": "direct",
+          "ranking_reason": "Same evidenced product category: appointment scheduling software. Customer overlap is unknown; missing customer lists do not rule out product competition.",
+          "relevance_score": 80
+        },
+        {
+          "name": "Setmore",
+          "domain": "setmore.com",
+          "pricing": [],
+          "features": [],
+          "products": [],
+          "customers": [],
+          "description": "Organize your business with 24/7 automated online booking, reminders, payments, and more.",
+          "source_urls": [
+            "https://www.setmore.com/"
+          ],
+          "relationship": "direct",
+          "ranking_reason": "Same evidenced product category: appointment scheduling software. Customer overlap is unknown; missing customer lists do not rule out product competition.",
+          "relevance_score": 80
+        },
+        {
+          "name": "Calendly",
+          "domain": "calendly.com",
+          "pricing": [],
+          "features": [
+            {
+              "name": "Notetaker",
+              "description": "Notetaker handles the notes.",
+              "source_urls": [
+                "https://calendly.com/"
+              ],
+              "evidence_quote": "Notetaker handles the notes."
+            },
+            {
+              "name": "Payment Features",
+              "description": "Charge upfront for meetings, sell packages, and send invoices with payment features that make it easy to get paid.",
+              "source_urls": [
+                "https://calendly.com/"
+              ],
+              "evidence_quote": "Charge upfront for meetings, sell packages, and send invoices with payment features that make it easy to get paid."
+            }
+          ],
+          "products": [
+            {
+              "name": "Calendly",
+              "description": "Calendly is the easiest and most powerful way to find time to connect.",
+              "source_urls": [
+                "https://calendly.com/"
+              ],
+              "evidence_quote": "Calendly is the easiest and most powerful way to find time to connect."
+            }
+          ],
+          "customers": [],
+          "description": "Calendly is the easiest and most powerful way to find time to connect.",
+          "source_urls": [
+            "https://calendly.com/"
+          ],
+          "relationship": "related",
+          "ranking_reason": "Shared product terms: feature, meeting, get, make, most, easy, payment, send. Customer overlap is unknown; missing customer lists do not rule out product competition.",
+          "relevance_score": 43
+        },
+        {
+          "name": "Square",
+          "domain": "squareup.com",
+          "pricing": [],
+          "features": [
+            {
+              "name": "create a free booking site",
+              "description": "Create a free booking site",
+              "source_urls": [
+                "https://squareup.com/us/en/appointments"
+              ],
+              "evidence_quote": "Create a free booking site"
+            },
+            {
+              "name": "add unlimited staff schedules",
+              "description": "Add unlimited staff schedules",
+              "source_urls": [
+                "https://squareup.com/us/en/appointments"
+              ],
+              "evidence_quote": "Add unlimited staff schedules"
+            },
+            {
+              "name": "track resource availability",
+              "description": "Track resource availability",
+              "source_urls": [
+                "https://squareup.com/us/en/appointments"
+              ],
+              "evidence_quote": "Track resource availability"
+            },
+            {
+              "name": "send reminders and more, automatically",
+              "description": "Send reminders and more, automatically",
+              "source_urls": [
+                "https://squareup.com/us/en/appointments"
+              ],
+              "evidence_quote": "Send reminders and more, automatically"
+            }
+          ],
+          "products": [
+            {
+              "name": "Square Handheld",
+              "description": "Square Handheld",
+              "source_urls": [
+                "https://squareup.com/us/en/appointments"
+              ],
+              "evidence_quote": "Square Handheld"
+            },
+            {
+              "name": "Square Terminal",
+              "description": "Square Terminal",
+              "source_urls": [
+                "https://squareup.com/us/en/appointments"
+              ],
+              "evidence_quote": "Square Terminal"
+            },
+            {
+              "name": "Square Register",
+              "description": "Square Register",
+              "source_urls": [
+                "https://squareup.com/us/en/appointments"
+              ],
+              "evidence_quote": "Square Register"
+            },
+            {
+              "name": "Square Reader for contactless and chip",
+              "description": "Square Reader for contactless and chip",
+              "source_urls": [
+                "https://squareup.com/us/en/appointments"
+              ],
+              "evidence_quote": "Square Reader for contactless and chip"
+            }
+          ],
+          "customers": [],
+          "description": "Say goodbye to scheduling chaos",
+          "source_urls": [
+            "https://squareup.com/us/en/appointments"
+          ],
+          "relationship": "related",
+          "ranking_reason": "Shared product terms: free, add, track, create, send. Customer overlap is unknown; missing customer lists do not rule out product competition.",
+          "relevance_score": 27
+        },
+        {
+          "name": "Appointy",
+          "domain": "appointy.com",
+          "pricing": [
+            {
+              "name": "FREE",
+              "description": "## FREE\n\n## USD 0.00\n\nper month",
+              "source_urls": [
+                "https://www.appointy.com/"
+              ],
+              "evidence_quote": "## FREE\n\n## USD 0.00\n\nper month"
+            },
+            {
+              "name": "GROWTH",
+              "description": "## GROWTH\n\n## USD 19.99\n\n## USD 29.99\n\nper month",
+              "source_urls": [
+                "https://www.appointy.com/"
+              ],
+              "evidence_quote": "## GROWTH\n\n## USD 19.99\n\n## USD 29.99\n\nper month"
+            },
+            {
+              "name": "PROFESSIONAL",
+              "description": "## PROFESSIONAL\n\n## USD 49.99\n\n## USD 59.99\n\nper month",
+              "source_urls": [
+                "https://www.appointy.com/"
+              ],
+              "evidence_quote": "## PROFESSIONAL\n\n## USD 49.99\n\n## USD 59.99\n\nper month"
+            },
+            {
+              "name": "ENTERPRISE",
+              "description": "## ENTERPRISE\n\n## USD 79.99\n\n## USD 99.99\n\nper month",
+              "source_urls": [
+                "https://www.appointy.com/"
+              ],
+              "evidence_quote": "## ENTERPRISE\n\n## USD 79.99\n\n## USD 99.99\n\nper month"
+            }
+          ],
+          "features": [
+            {
+              "name": "Schedule online",
+              "description": "### Schedule online",
+              "source_urls": [
+                "https://www.appointy.com/"
+              ],
+              "evidence_quote": "### Schedule online"
+            }
+          ],
+          "products": [
+            {
+              "name": "Appointy",
+              "description": "## Appointy - simple, functional, powerful: no compromises!",
+              "source_urls": [
+                "https://www.appointy.com/"
+              ],
+              "evidence_quote": "## Appointy - simple, functional, powerful: no compromises!"
+            }
+          ],
+          "customers": [],
+          "description": "Discover the easiest way to automate scheduling and grow your business",
+          "source_urls": [
+            "https://www.appointy.com/"
+          ],
+          "relationship": "related",
+          "ranking_reason": "Shared product terms: growth, automate, free. Customer overlap is unknown; missing customer lists do not rule out product competition.",
+          "relevance_score": 16
+        }
+      ],
+      "version": 13,
+      "working": false,
+      "warnings": [],
+      "candidates": [
+        {
+          "url": "https://squareup.com/us/en/appointments",
+          "domain": "squareup.com",
+          "relevance": 30,
+          "discovery_urls": [
+            "https://squareup.com/us/en/appointments"
+          ]
+        },
+        {
+          "url": "https://lunacal.ai/blogs/best-appointment-booking-software",
+          "domain": "lunacal.ai",
+          "relevance": 15,
+          "discovery_urls": [
+            "https://lunacal.ai/blogs/best-appointment-booking-software"
+          ]
+        },
+        {
+          "url": "https://www.appointy.com/",
+          "domain": "appointy.com",
+          "relevance": 12,
+          "discovery_urls": [
+            "https://www.appointy.com/"
+          ]
+        },
+        {
+          "url": "https://www.setmore.com/",
+          "domain": "setmore.com",
+          "relevance": 12,
+          "discovery_urls": [
+            "https://www.setmore.com/"
+          ]
+        },
+        {
+          "url": "https://calendly.com/",
+          "domain": "calendly.com",
+          "relevance": 9,
+          "discovery_urls": [
+            "https://calendly.com/"
+          ]
+        },
+        {
+          "url": "https://bestdoc.com/best-medical-appointment-scheduling-software/",
+          "domain": "bestdoc.com",
+          "relevance": 6,
+          "discovery_urls": [
+            "https://bestdoc.com/best-medical-appointment-scheduling-software/"
+          ]
+        },
+        {
+          "url": "https://www.qmatic.com/resources/appointment-scheduling",
+          "domain": "qmatic.com",
+          "relevance": 6,
+          "discovery_urls": [
+            "https://www.qmatic.com/resources/appointment-scheduling"
+          ]
+        }
+      ],
+      "error_code": null,
+      "updated_at": "2026-10-20T01:28:26.661655+00:00",
+      "searches_used": 3,
+      "batch_attempted": true,
+      "pages_completed": 7,
+      "provider_job_id": "01a156ec-1845-7144-863f-e9745e4d831d",
+      "search_successes": 3
+    },
+    "campaign_plan": {
+      "status": "completed",
+      "version": 2,
+      "warnings": [
+        "AI audience suggestions are inferred opportunities, not verified customers."
+      ],
+      "campaigns": [
+        {
+          "id": "7764db4d-a477-4ec4-9a3a-ea705d109c2c",
+          "name": "Marketing Directors in Mid-Market Companies",
+          "origin": "suggested",
+          "criteria": [
+            "Job title includes Marketing Director",
+            "Company size 100-1000 employees",
+            "Industries like technology or professional services"
+          ],
+          "keywords": [
+            "marketing director",
+            "mid-market company",
+            "lead generation",
+            "SEO strategy",
+            "marketing automation"
+          ],
+          "reasoning": "HubSpot's Marketing Hub and SEO software are designed for scaling marketing efforts, which aligns with mid-market companies aiming for growth.",
+          "pain_points": [
+            "Difficulty in measuring ROI from campaigns",
+            "Scattered tools for SEO and content marketing"
+          ],
+          "source_urls": [
+            "https://www.hubspot.com/pricing/marketing"
+          ],
+          "audience_basis": "inferred",
+          "ideal_customer": "Mid-market companies needing integrated marketing tools for lead generation and SEO to scale operations",
+          "target_audience": "Marketing leaders in companies with 100-1000 employees focused on growth strategies",
+          "target_industry": "Marketing and Advertising",
+          "evidence_summary": "AI audience hypothesis based on saved research: company:product:1. Not a verified customer segment.",
+          "target_locations": []
+        },
+        {
+          "id": "9f9931c7-ebed-4548-bc4c-c10c84d16ffb",
+          "name": "Sales Managers in B2B Enterprises",
+          "origin": "suggested",
+          "criteria": [
+            "Job title Sales Manager",
+            "Company type B2B",
+            "Uses CRM systems"
+          ],
+          "keywords": [
+            "sales manager",
+            "B2B company",
+            "lead management",
+            "sales automation",
+            "CRM"
+          ],
+          "reasoning": "HubSpot's Sales Hub offers lead management, automation, and reporting, crucial for B2B sales teams.",
+          "pain_points": [
+            "Inefficient lead tracking",
+            "Manual follow-ups",
+            "Lack of sales performance insights"
+          ],
+          "source_urls": [
+            "https://www.hubspot.com/products/sales/sales-leads",
+            "https://www.hubspot.com/products/sales/sales-reports"
+          ],
+          "audience_basis": "inferred",
+          "ideal_customer": "B2B companies with complex sales cycles needing lead management and automation",
+          "target_audience": "Sales professionals managing pipelines in business-to-business companies",
+          "target_industry": "Sales",
+          "evidence_summary": "AI audience hypothesis based on saved research: company:product:4. Not a verified customer segment.",
+          "target_locations": []
+        },
+        {
+          "id": "9abea5a4-85e5-4b2c-941f-ad3f83d6ed0c",
+          "name": "Small Business Owners",
+          "origin": "suggested",
+          "criteria": [
+            "Company size 1-50 employees",
+            "Uses online booking systems",
+            "Active in local markets"
+          ],
+          "keywords": [
+            "small business owner",
+            "entrepreneur",
+            "free scheduling tool",
+            "email tracking",
+            "affordable CRM"
+          ],
+          "reasoning": "HubSpot's free tools like meeting scheduler and email tracking are ideal for small businesses, and starter pricing for new customers.",
+          "pain_points": [
+            "Time management issues",
+            "Difficulty in tracking leads",
+            "Need for cost-effective solutions"
+          ],
+          "source_urls": [
+            "https://www.hubspot.com/products/sales/sales-reports",
+            "https://www.hubspot.com/pricing/marketing"
+          ],
+          "audience_basis": "inferred",
+          "ideal_customer": "Small businesses needing affordable tools for customer engagement and scheduling",
+          "target_audience": "Entrepreneurs running small businesses with limited resources",
+          "target_industry": "Small Business",
+          "evidence_summary": "AI audience hypothesis based on saved research: company:product:6, company:audience:0. Not a verified customer segment.",
+          "target_locations": []
+        },
+        {
+          "id": "075c894f-7eb4-4d6c-bc9d-f9d37a22df3b",
+          "name": "Professional Services Consultants",
+          "origin": "suggested",
+          "criteria": [
+            "Profession consultant",
+            "Uses scheduling software",
+            "Operates in service-based industries"
+          ],
+          "keywords": [
+            "consultant",
+            "freelancer",
+            "appointment scheduling",
+            "client management",
+            "professional services"
+          ],
+          "reasoning": "HubSpot's free meeting scheduler and contact management can streamline client bookings and follow-ups.",
+          "pain_points": [
+            "Overbooked calendars",
+            "Missed follow-ups",
+            "Inefficient client communication"
+          ],
+          "source_urls": [
+            "https://www.hubspot.com/products/sales/sales-reports"
+          ],
+          "audience_basis": "inferred",
+          "ideal_customer": "Independent consultants or small firms offering services like marketing, legal, or IT consulting",
+          "target_audience": "Consultants or freelancers managing client appointments and communications",
+          "target_industry": "Professional Services",
+          "evidence_summary": "AI audience hypothesis based on saved research: company:product:6. Not a verified customer segment.",
+          "target_locations": []
+        },
+        {
+          "id": "1b9d206c-9be9-49b2-ac09-945e7f242d1b",
+          "name": "E-commerce Store Owners",
+          "origin": "suggested",
+          "criteria": [
+            "Business type e-commerce",
+            "Has an online store",
+            "Uses digital marketing"
+          ],
+          "keywords": [
+            "e-commerce owner",
+            "online store",
+            "SEO for e-commerce",
+            "marketing automation",
+            "sales funnel"
+          ],
+          "reasoning": "HubSpot's SEO and marketing tools can help e-commerce businesses improve search visibility and automate campaigns.",
+          "pain_points": [
+            "Low organic traffic",
+            "High cart abandonment",
+            "Inefficient email marketing"
+          ],
+          "source_urls": [
+            "https://www.hubspot.com/products/marketing/seo"
+          ],
+          "audience_basis": "inferred",
+          "ideal_customer": "Online retailers needing SEO, marketing automation, and sales tools to increase conversions",
+          "target_audience": "Owners of online retail businesses focused on growth",
+          "target_industry": "E-commerce",
+          "evidence_summary": "AI audience hypothesis based on saved research: company:product:0. Not a verified customer segment.",
+          "target_locations": []
+        }
+      ],
+      "created_at": "2026-10-20T01:28:33.050698+00:00",
+      "updated_at": "2026-10-20T01:29:21.725443+00:00",
+      "selected_ids": [
+        "7764db4d-a477-4ec4-9a3a-ea705d109c2c"
+      ],
+      "generation_version": 3
+    },
+    "company_discovery": {
+      "7764db4d-a477-4ec4-9a3a-ea705d109c2c": {
+        "run": 1,
+        "error": null,
+        "saved": [],
+        "status": "searching",
+        "queries": [
+          "marketing director firm practice company -software -tools -template",
+          "mid-market company about team clients -blog -guide",
+          "marketing and advertising independent agency business -directory -alternatives"
+        ],
+        "results": [
+          {
+            "name": null,
+            "domain": "marketerhire.com",
+            "website": "https://marketerhire.com/blog/law-firm-marketing-department-structure",
+            "evidence": {},
+            "industry": null,
+            "location": null,
+            "relevance": "Potential match",
+            "confidence": "low",
+            "description": "Market Researchers: Analyze market trends, such as client needs or competitor strategies, to inform marketing decisions. For example, they might identify an untapped demand for legal services in niche areas like elder law or the potential of cryptocurrency regulation. Event Coordinators: Organize seminars, webinars, and community outreach events that get your legal firm noticed by new clients. These events help build relationships and increase your visibility within the legal and local community. Whether you’re running a boutique practice or managing a large-scale firm, a growth-oriented marke",
+            "source_urls": [
+              "https://marketerhire.com/blog/law-firm-marketing-department-structure"
+            ],
+            "match_reason": "Returned by campaign search. Relevance is provisional and based on search evidence.",
+            "search_title": "Law Firm Marketing Team Structure, Simplified",
+            "field_sources": {
+              "description": "search"
+            },
+            "research_notes": [
+              "Discovered in search; website facts and customer fit are not yet verified."
+            ],
+            "relevance_score": 22,
+            "research_status": "unverified",
+            "matched_criteria": {
+              "name": "Marketing Directors in Mid-Market Companies",
+              "audience": "Marketing leaders in companies with 100-1000 employees focused on growth strategies",
+              "industry": "Marketing and Advertising",
+              "keywords": [
+                "marketing director",
+                "mid-market company",
+                "lead generation",
+                "SEO strategy",
+                "marketing automation"
+              ],
+              "locations": [],
+              "reasoning": "HubSpot's Marketing Hub and SEO software are designed for scaling marketing efforts, which aligns with mid-market companies aiming for growth.",
+              "project_id": "58bc6909-55c6-4b5f-b9da-9157698b77aa",
+              "campaign_id": "7764db4d-a477-4ec4-9a3a-ea705d109c2c",
+              "source_urls": [
+                "https://www.hubspot.com/pricing/marketing"
+              ],
+              "plan_version": 2,
+              "ideal_customer": "Mid-market companies needing integrated marketing tools for lead generation and SEO to scale operations",
+              "research_job_id": "5668a6b6-602a-413c-b319-b03ac04db13b",
+              "excluded_domains": [
+                "hubspot.com",
+                "bestdoc.com",
+                "lunacal.ai",
+                "qmatic.com",
+                "setmore.com",
+                "calendly.com",
+                "squareup.com",
+                "appointy.com"
+              ]
+            },
+            "enrichment_status": "pending"
+          },
+          {
+            "name": null,
+            "domain": "marketmymarket.com",
+            "website": "https://www.marketmymarket.com/legal-marketing/what-does-a-law-firm-marketing-manager-do/",
+            "evidence": {},
+            "industry": null,
+            "location": null,
+            "relevance": "Potential match",
+            "confidence": "low",
+            "description": "A law firm marketing manager (also referred to as a law firm marketing director) is the one you put in charge of your law firm’s digital marketing efforts. While you may be able to handle your advertising by yourself when your law firm first opens, as jobs begin to pick up you may find that you simply can’t spend the time doing research yourself.",
+            "source_urls": [
+              "https://www.marketmymarket.com/legal-marketing/what-does-a-law-firm-marketing-manager-do/"
+            ],
+            "match_reason": "Returned by campaign search. Relevance is provisional and based on search evidence.",
+            "search_title": "What Does a Law Firm Marketing Manager Do? - Market My Market",
+            "field_sources": {
+              "description": "search"
+            },
+            "research_notes": [
+              "Discovered in search; website facts and customer fit are not yet verified."
+            ],
+            "relevance_score": 18,
+            "research_status": "unverified",
+            "matched_criteria": {
+              "name": "Marketing Directors in Mid-Market Companies",
+              "audience": "Marketing leaders in companies with 100-1000 employees focused on growth strategies",
+              "industry": "Marketing and Advertising",
+              "keywords": [
+                "marketing director",
+                "mid-market company",
+                "lead generation",
+                "SEO strategy",
+                "marketing automation"
+              ],
+              "locations": [],
+              "reasoning": "HubSpot's Marketing Hub and SEO software are designed for scaling marketing efforts, which aligns with mid-market companies aiming for growth.",
+              "project_id": "58bc6909-55c6-4b5f-b9da-9157698b77aa",
+              "campaign_id": "7764db4d-a477-4ec4-9a3a-ea705d109c2c",
+              "source_urls": [
+                "https://www.hubspot.com/pricing/marketing"
+              ],
+              "plan_version": 2,
+              "ideal_customer": "Mid-market companies needing integrated marketing tools for lead generation and SEO to scale operations",
+              "research_job_id": "5668a6b6-602a-413c-b319-b03ac04db13b",
+              "excluded_domains": [
+                "hubspot.com",
+                "bestdoc.com",
+                "lunacal.ai",
+                "qmatic.com",
+                "setmore.com",
+                "calendly.com",
+                "squareup.com",
+                "appointy.com"
+              ]
+            },
+            "enrichment_status": "pending"
+          },
+          {
+            "name": null,
+            "domain": "lexisnexis.com",
+            "website": "https://www.lexisnexis.com/en-us/law-firms/marketing-directors.page",
+            "evidence": {},
+            "industry": null,
+            "location": null,
+            "relevance": "Potential match",
+            "confidence": "low",
+            "description": "You must help attract new clients and promote your firm's brand. LexisNexis® solutions help you gather market intelligence, research competitors, clients and prospects; develop informed marketing campaigns & share actionable market, industry and practice area information with members of your firm.",
+            "source_urls": [
+              "https://www.lexisnexis.com/en-us/law-firms/marketing-directors.page"
+            ],
+            "match_reason": "Returned by campaign search. Relevance is provisional and based on search evidence.",
+            "search_title": "Law Firm Solutions for Marketing Directors | LexisNexis",
+            "field_sources": {
+              "description": "search"
+            },
+            "research_notes": [
+              "Discovered in search; website facts and customer fit are not yet verified."
+            ],
+            "relevance_score": 15,
+            "research_status": "unverified",
+            "matched_criteria": {
+              "name": "Marketing Directors in Mid-Market Companies",
+              "audience": "Marketing leaders in companies with 100-1000 employees focused on growth strategies",
+              "industry": "Marketing and Advertising",
+              "keywords": [
+                "marketing director",
+                "mid-market company",
+                "lead generation",
+                "SEO strategy",
+                "marketing automation"
+              ],
+              "locations": [],
+              "reasoning": "HubSpot's Marketing Hub and SEO software are designed for scaling marketing efforts, which aligns with mid-market companies aiming for growth.",
+              "project_id": "58bc6909-55c6-4b5f-b9da-9157698b77aa",
+              "campaign_id": "7764db4d-a477-4ec4-9a3a-ea705d109c2c",
+              "source_urls": [
+                "https://www.hubspot.com/pricing/marketing"
+              ],
+              "plan_version": 2,
+              "ideal_customer": "Mid-market companies needing integrated marketing tools for lead generation and SEO to scale operations",
+              "research_job_id": "5668a6b6-602a-413c-b319-b03ac04db13b",
+              "excluded_domains": [
+                "hubspot.com",
+                "bestdoc.com",
+                "lunacal.ai",
+                "qmatic.com",
+                "setmore.com",
+                "calendly.com",
+                "squareup.com",
+                "appointy.com"
+              ]
+            },
+            "enrichment_status": "pending"
+          },
+          {
+            "name": null,
+            "domain": "lawmatics.com",
+            "website": "https://www.lawmatics.com/blog/what-does-a-marketing-manager-do-in-a-law-firm",
+            "evidence": {},
+            "industry": null,
+            "location": null,
+            "relevance": "Potential match",
+            "confidence": "low",
+            "description": "Digital efforts, on the other hand, involve managing the firm’s website, keeping its blog updated, maintaining its social media presence, and overseeing lawyer biographies and other information posted on law firm review sites. Many of these duties can be streamlined through the use of law firm marketing automation, which provides many benefits to law firms and those who direct their marketing efforts.",
+            "source_urls": [
+              "https://www.lawmatics.com/blog/what-does-a-marketing-manager-do-in-a-law-firm"
+            ],
+            "match_reason": "Returned by campaign search. Relevance is provisional and based on search evidence.",
+            "search_title": "What Does a Marketing Manager Do in a Law Firm?",
+            "field_sources": {
+              "description": "search"
+            },
+            "research_notes": [
+              "Discovered in search; website facts and customer fit are not yet verified."
+            ],
+            "relevance_score": 12,
+            "research_status": "unverified",
+            "matched_criteria": {
+              "name": "Marketing Directors in Mid-Market Companies",
+              "audience": "Marketing leaders in companies with 100-1000 employees focused on growth strategies",
+              "industry": "Marketing and Advertising",
+              "keywords": [
+                "marketing director",
+                "mid-market company",
+                "lead generation",
+                "SEO strategy",
+                "marketing automation"
+              ],
+              "locations": [],
+              "reasoning": "HubSpot's Marketing Hub and SEO software are designed for scaling marketing efforts, which aligns with mid-market companies aiming for growth.",
+              "project_id": "58bc6909-55c6-4b5f-b9da-9157698b77aa",
+              "campaign_id": "7764db4d-a477-4ec4-9a3a-ea705d109c2c",
+              "source_urls": [
+                "https://www.hubspot.com/pricing/marketing"
+              ],
+              "plan_version": 2,
+              "ideal_customer": "Mid-market companies needing integrated marketing tools for lead generation and SEO to scale operations",
+              "research_job_id": "5668a6b6-602a-413c-b319-b03ac04db13b",
+              "excluded_domains": [
+                "hubspot.com",
+                "bestdoc.com",
+                "lunacal.ai",
+                "qmatic.com",
+                "setmore.com",
+                "calendly.com",
+                "squareup.com",
+                "appointy.com"
+              ]
+            },
+            "enrichment_status": "pending"
+          },
+          {
+            "name": null,
+            "domain": "searchbusinessgroup.com",
+            "website": "https://searchbusinessgroup.com/law-firm-director-of-marketing/",
+            "evidence": {},
+            "industry": null,
+            "location": null,
+            "relevance": "Potential match",
+            "confidence": "low",
+            "description": "This keeps things transparent and builds trust, which are crucial for our firm’s success. By tackling these ethical issues head-on, we can keep our practice professional and trustworthy. This not only boosts our reputation but also helps us build lasting relationships with our clients and the community. ... President & Digital Marketing Strategist at Search Business Group.",
+            "source_urls": [
+              "https://searchbusinessgroup.com/law-firm-director-of-marketing/"
+            ],
+            "match_reason": "Returned by campaign search. Relevance is provisional and based on search evidence.",
+            "search_title": "What Does a Law Firm Director of Marketing Do?",
+            "field_sources": {
+              "description": "search"
+            },
+            "research_notes": [
+              "Discovered in search; website facts and customer fit are not yet verified."
+            ],
+            "relevance_score": 12,
+            "research_status": "unverified",
+            "matched_criteria": {
+              "name": "Marketing Directors in Mid-Market Companies",
+              "audience": "Marketing leaders in companies with 100-1000 employees focused on growth strategies",
+              "industry": "Marketing and Advertising",
+              "keywords": [
+                "marketing director",
+                "mid-market company",
+                "lead generation",
+                "SEO strategy",
+                "marketing automation"
+              ],
+              "locations": [],
+              "reasoning": "HubSpot's Marketing Hub and SEO software are designed for scaling marketing efforts, which aligns with mid-market companies aiming for growth.",
+              "project_id": "58bc6909-55c6-4b5f-b9da-9157698b77aa",
+              "campaign_id": "7764db4d-a477-4ec4-9a3a-ea705d109c2c",
+              "source_urls": [
+                "https://www.hubspot.com/pricing/marketing"
+              ],
+              "plan_version": 2,
+              "ideal_customer": "Mid-market companies needing integrated marketing tools for lead generation and SEO to scale operations",
+              "research_job_id": "5668a6b6-602a-413c-b319-b03ac04db13b",
+              "excluded_domains": [
+                "hubspot.com",
+                "bestdoc.com",
+                "lunacal.ai",
+                "qmatic.com",
+                "setmore.com",
+                "calendly.com",
+                "squareup.com",
+                "appointy.com"
+              ]
+            },
+            "enrichment_status": "pending"
+          },
+          {
+            "name": null,
+            "domain": "martindale-avvo.com",
+            "website": "https://www.martindale-avvo.com/blog/how-to-run-a-law-firm-who-to-hire-marketing-manager/",
+            "evidence": {},
+            "industry": null,
+            "location": null,
+            "relevance": "Potential match",
+            "confidence": "low",
+            "description": "Hiring a marketing manager is often not an option. Small firms or medium size practices simply cannot afford to hire a marketing manager at that cost. Instead, you can save money by working with a third-party marketing manager at Martindale-Avvo.",
+            "source_urls": [
+              "https://www.martindale-avvo.com/blog/how-to-run-a-law-firm-who-to-hire-marketing-manager/"
+            ],
+            "match_reason": "Returned by campaign search. Relevance is provisional and based on search evidence.",
+            "search_title": "Hiring a Marketing Manager at your Law Firm | Martindale-Avvo",
+            "field_sources": {
+              "description": "search"
+            },
+            "research_notes": [
+              "Discovered in search; website facts and customer fit are not yet verified."
+            ],
+            "relevance_score": 10,
+            "research_status": "unverified",
+            "matched_criteria": {
+              "name": "Marketing Directors in Mid-Market Companies",
+              "audience": "Marketing leaders in companies with 100-1000 employees focused on growth strategies",
+              "industry": "Marketing and Advertising",
+              "keywords": [
+                "marketing director",
+                "mid-market company",
+                "lead generation",
+                "SEO strategy",
+                "marketing automation"
+              ],
+              "locations": [],
+              "reasoning": "HubSpot's Marketing Hub and SEO software are designed for scaling marketing efforts, which aligns with mid-market companies aiming for growth.",
+              "project_id": "58bc6909-55c6-4b5f-b9da-9157698b77aa",
+              "campaign_id": "7764db4d-a477-4ec4-9a3a-ea705d109c2c",
+              "source_urls": [
+                "https://www.hubspot.com/pricing/marketing"
+              ],
+              "plan_version": 2,
+              "ideal_customer": "Mid-market companies needing integrated marketing tools for lead generation and SEO to scale operations",
+              "research_job_id": "5668a6b6-602a-413c-b319-b03ac04db13b",
+              "excluded_domains": [
+                "hubspot.com",
+                "bestdoc.com",
+                "lunacal.ai",
+                "qmatic.com",
+                "setmore.com",
+                "calendly.com",
+                "squareup.com",
+                "appointy.com"
+              ]
+            },
+            "enrichment_status": "pending"
+          },
+          {
+            "name": null,
+            "domain": "staceyeburke.com",
+            "website": "https://www.staceyeburke.com/blog/how-to-hire-a-law-firm-marketing-director/",
+            "evidence": {},
+            "industry": null,
+            "location": null,
+            "relevance": "Potential match",
+            "confidence": "low",
+            "description": "If you can’t find someone with legal marketing experience, the next best option is an individual with professional services marketing experience, such as marketing for doctors or accountants. After that, look for marketers who have served the industries within which you target clients (i.e. construction company marketing staff for a firm practicing construction law), as they will have invaluable industry connections and insider knowledge.",
+            "source_urls": [
+              "https://www.staceyeburke.com/blog/how-to-hire-a-law-firm-marketing-director/"
+            ],
+            "match_reason": "Returned by campaign search. Relevance is provisional and based on search evidence.",
+            "search_title": "How to Hire a Law Firm Marketing Director | Stacey E. Burke, P.C.",
+            "field_sources": {
+              "description": "search"
+            },
+            "research_notes": [
+              "Discovered in search; website facts and customer fit are not yet verified."
+            ],
+            "relevance_score": 0,
+            "research_status": "unverified",
+            "matched_criteria": {
+              "name": "Marketing Directors in Mid-Market Companies",
+              "audience": "Marketing leaders in companies with 100-1000 employees focused on growth strategies",
+              "industry": "Marketing and Advertising",
+              "keywords": [
+                "marketing director",
+                "mid-market company",
+                "lead generation",
+                "SEO strategy",
+                "marketing automation"
+              ],
+              "locations": [],
+              "reasoning": "HubSpot's Marketing Hub and SEO software are designed for scaling marketing efforts, which aligns with mid-market companies aiming for growth.",
+              "project_id": "58bc6909-55c6-4b5f-b9da-9157698b77aa",
+              "campaign_id": "7764db4d-a477-4ec4-9a3a-ea705d109c2c",
+              "source_urls": [
+                "https://www.hubspot.com/pricing/marketing"
+              ],
+              "plan_version": 2,
+              "ideal_customer": "Mid-market companies needing integrated marketing tools for lead generation and SEO to scale operations",
+              "research_job_id": "5668a6b6-602a-413c-b319-b03ac04db13b",
+              "excluded_domains": [
+                "hubspot.com",
+                "bestdoc.com",
+                "lunacal.ai",
+                "qmatic.com",
+                "setmore.com",
+                "calendly.com",
+                "squareup.com",
+                "appointy.com"
+              ]
+            },
+            "enrichment_status": "pending"
+          }
+        ],
+        "version": 4,
+        "working": true,
+        "criteria": {
+          "name": "Marketing Directors in Mid-Market Companies",
+          "audience": "Marketing leaders in companies with 100-1000 employees focused on growth strategies",
+          "industry": "Marketing and Advertising",
+          "keywords": [
+            "marketing director",
+            "mid-market company",
+            "lead generation",
+            "SEO strategy",
+            "marketing automation"
+          ],
+          "locations": [],
+          "reasoning": "HubSpot's Marketing Hub and SEO software are designed for scaling marketing efforts, which aligns with mid-market companies aiming for growth.",
+          "project_id": "58bc6909-55c6-4b5f-b9da-9157698b77aa",
+          "campaign_id": "7764db4d-a477-4ec4-9a3a-ea705d109c2c",
+          "source_urls": [
+            "https://www.hubspot.com/pricing/marketing"
+          ],
+          "plan_version": 2,
+          "ideal_customer": "Mid-market companies needing integrated marketing tools for lead generation and SEO to scale operations",
+          "research_job_id": "5668a6b6-602a-413c-b319-b03ac04db13b",
+          "excluded_domains": [
+            "hubspot.com",
+            "bestdoc.com",
+            "lunacal.ai",
+            "qmatic.com",
+            "setmore.com",
+            "calendly.com",
+            "squareup.com",
+            "appointy.com"
+          ]
+        },
+        "warnings": [],
+        "signature": "[\"Marketing leaders in companies with 100-1000 employees focused on growth strategies\",\"Marketing and Advertising\",\"Mid-market companies needing integrated marketing tools for lead generation and SEO to scale operations\",[\"SEO strategy\",\"lead generation\",\"marketing automation\",\"marketing director\",\"mid-market company\"],[],[\"appointy.com\",\"bestdoc.com\",\"calendly.com\",\"hubspot.com\",\"lunacal.ai\",\"qmatic.com\",\"setmore.com\",\"squareup.com\"]]",
+        "candidates": [
+          {
+            "url": "https://marketerhire.com/blog/law-firm-marketing-department-structure",
+            "domain": "marketerhire.com",
+            "relevance": 22,
+            "search_title": "Law Firm Marketing Team Structure, Simplified",
+            "discovery_urls": [
+              "https://marketerhire.com/blog/law-firm-marketing-department-structure"
+            ],
+            "search_description": "Market Researchers: Analyze market trends, such as client needs or competitor strategies, to inform marketing decisions. For example, they might identify an untapped demand for legal services in niche areas like elder law or the potential of cryptocurrency regulation. Event Coordinators: Organize seminars, webinars, and community outreach events that get your legal firm noticed by new clients. These events help build relationships and increase your visibility within the legal and local community. Whether you’re running a boutique practice or managing a large-scale firm, a growth-oriented marke"
+          },
+          {
+            "url": "https://www.marketmymarket.com/legal-marketing/what-does-a-law-firm-marketing-manager-do/",
+            "domain": "marketmymarket.com",
+            "relevance": 18,
+            "search_title": "What Does a Law Firm Marketing Manager Do? - Market My Market",
+            "discovery_urls": [
+              "https://www.marketmymarket.com/legal-marketing/what-does-a-law-firm-marketing-manager-do/"
+            ],
+            "search_description": "A law firm marketing manager (also referred to as a law firm marketing director) is the one you put in charge of your law firm’s digital marketing efforts. While you may be able to handle your advertising by yourself when your law firm first opens, as jobs begin to pick up you may find that you simply can’t spend the time doing research yourself."
+          },
+          {
+            "url": "https://www.lexisnexis.com/en-us/law-firms/marketing-directors.page",
+            "domain": "lexisnexis.com",
+            "relevance": 15,
+            "search_title": "Law Firm Solutions for Marketing Directors | LexisNexis",
+            "discovery_urls": [
+              "https://www.lexisnexis.com/en-us/law-firms/marketing-directors.page"
+            ],
+            "search_description": "You must help attract new clients and promote your firm's brand. LexisNexis® solutions help you gather market intelligence, research competitors, clients and prospects; develop informed marketing campaigns & share actionable market, industry and practice area information with members of your firm."
+          },
+          {
+            "url": "https://www.lawmatics.com/blog/what-does-a-marketing-manager-do-in-a-law-firm",
+            "domain": "lawmatics.com",
+            "relevance": 12,
+            "search_title": "What Does a Marketing Manager Do in a Law Firm?",
+            "discovery_urls": [
+              "https://www.lawmatics.com/blog/what-does-a-marketing-manager-do-in-a-law-firm"
+            ],
+            "search_description": "Digital efforts, on the other hand, involve managing the firm’s website, keeping its blog updated, maintaining its social media presence, and overseeing lawyer biographies and other information posted on law firm review sites. Many of these duties can be streamlined through the use of law firm marketing automation, which provides many benefits to law firms and those who direct their marketing efforts."
+          },
+          {
+            "url": "https://searchbusinessgroup.com/law-firm-director-of-marketing/",
+            "domain": "searchbusinessgroup.com",
+            "relevance": 12,
+            "search_title": "What Does a Law Firm Director of Marketing Do?",
+            "discovery_urls": [
+              "https://searchbusinessgroup.com/law-firm-director-of-marketing/"
+            ],
+            "search_description": "This keeps things transparent and builds trust, which are crucial for our firm’s success. By tackling these ethical issues head-on, we can keep our practice professional and trustworthy. This not only boosts our reputation but also helps us build lasting relationships with our clients and the community. ... President & Digital Marketing Strategist at Search Business Group."
+          },
+          {
+            "url": "https://www.martindale-avvo.com/blog/how-to-run-a-law-firm-who-to-hire-marketing-manager/",
+            "domain": "martindale-avvo.com",
+            "relevance": 10,
+            "search_title": "Hiring a Marketing Manager at your Law Firm | Martindale-Avvo",
+            "discovery_urls": [
+              "https://www.martindale-avvo.com/blog/how-to-run-a-law-firm-who-to-hire-marketing-manager/"
+            ],
+            "search_description": "Hiring a marketing manager is often not an option. Small firms or medium size practices simply cannot afford to hire a marketing manager at that cost. Instead, you can save money by working with a third-party marketing manager at Martindale-Avvo."
+          },
+          {
+            "url": "https://www.staceyeburke.com/blog/how-to-hire-a-law-firm-marketing-director/",
+            "domain": "staceyeburke.com",
+            "relevance": 0,
+            "search_title": "How to Hire a Law Firm Marketing Director | Stacey E. Burke, P.C.",
+            "discovery_urls": [
+              "https://www.staceyeburke.com/blog/how-to-hire-a-law-firm-marketing-director/"
+            ],
+            "search_description": "If you can’t find someone with legal marketing experience, the next best option is an individual with professional services marketing experience, such as marketing for doctors or accountants. After that, look for marketers who have served the industries within which you target clients (i.e. construction company marketing staff for a firm practicing construction law), as they will have invaluable industry connections and insider knowledge."
+          }
+        ],
+        "error_code": null,
+        "updated_at": "2026-10-20T01:29:40.437963+00:00",
+        "diagnostics": [
+          {
+            "at": "2026-10-20T01:29:37.298Z",
+            "type": "search",
+            "query": "marketing director firm practice company -software -tools -template",
+            "reason": "Search completed; candidates are visible before website verification.",
+            "outcome": "completed",
+            "result_count": 8,
+            "retained_count": 7
+          },
+          {
+            "at": "2026-10-20T01:29:37.298Z",
+            "url": "https://searchbusinessgroup.com/law-firm-director-of-marketing/",
+            "type": "candidate",
+            "domain": "searchbusinessgroup.com",
+            "reason": "Search candidate retained pending website research",
+            "outcome": "retained"
+          },
+          {
+            "at": "2026-10-20T01:29:37.298Z",
+            "url": "https://www.reddit.com/r/LawFirmMarketing/comments/1j31rwn/offer_for_director_of_marketing/",
+            "type": "candidate",
+            "domain": "reddit.com",
+            "reason": "Directory, social, review or repository host",
+            "outcome": "rejected"
+          },
+          {
+            "at": "2026-10-20T01:29:37.298Z",
+            "url": "https://www.staceyeburke.com/blog/how-to-hire-a-law-firm-marketing-director/",
+            "type": "candidate",
+            "domain": "staceyeburke.com",
+            "reason": "Vendor-facing page: retained with lower priority; audience mentions alone do not prove buyer fit",
+            "outcome": "retained"
+          },
+          {
+            "at": "2026-10-20T01:29:37.298Z",
+            "url": "https://www.lexisnexis.com/en-us/law-firms/marketing-directors.page",
+            "type": "candidate",
+            "domain": "lexisnexis.com",
+            "reason": "Search candidate retained pending website research",
+            "outcome": "retained"
+          },
+          {
+            "at": "2026-10-20T01:29:37.298Z",
+            "url": "https://www.lawmatics.com/blog/what-does-a-marketing-manager-do-in-a-law-firm",
+            "type": "candidate",
+            "domain": "lawmatics.com",
+            "reason": "Search candidate retained pending website research",
+            "outcome": "retained"
+          },
+          {
+            "at": "2026-10-20T01:29:37.298Z",
+            "url": "https://www.martindale-avvo.com/blog/how-to-run-a-law-firm-who-to-hire-marketing-manager/",
+            "type": "candidate",
+            "domain": "martindale-avvo.com",
+            "reason": "Search candidate retained pending website research",
+            "outcome": "retained"
+          },
+          {
+            "at": "2026-10-20T01:29:37.298Z",
+            "url": "https://www.marketmymarket.com/legal-marketing/what-does-a-law-firm-marketing-manager-do/",
+            "type": "candidate",
+            "domain": "marketmymarket.com",
+            "reason": "Search candidate retained pending website research",
+            "outcome": "retained"
+          },
+          {
+            "at": "2026-10-20T01:29:37.298Z",
+            "url": "https://marketerhire.com/blog/law-firm-marketing-department-structure",
+            "type": "candidate",
+            "domain": "marketerhire.com",
+            "reason": "Search candidate retained pending website research",
+            "outcome": "retained"
+          }
+        ],
+        "searches_used": 2,
+        "pages_attempted": 0,
+        "removed_domains": [],
+        "discovery_version": 2
+      }
+    },
+    "people_discovery": {}
+  },
+  "events": [
+    {
+      "id": 60,
+      "job_id": "5668a6b6-602a-413c-b319-b03ac04db13b",
+      "project_id": "58bc6909-55c6-4b5f-b9da-9157698b77aa",
+      "status": "mapping",
+      "message": "Finding company pages",
+      "pages_completed": 0,
+      "created_at": "2026-10-20T01:26:32.362982+00:00"
+    },
+    {
+      "id": 61,
+      "job_id": "5668a6b6-602a-413c-b319-b03ac04db13b",
+      "project_id": "58bc6909-55c6-4b5f-b9da-9157698b77aa",
+      "status": "scraping",
+      "message": "Researching company pages",
+      "pages_completed": 0,
+      "created_at": "2026-10-20T01:26:40.987695+00:00"
+    },
+    {
+      "id": 62,
+      "job_id": "5668a6b6-602a-413c-b319-b03ac04db13b",
+      "project_id": "58bc6909-55c6-4b5f-b9da-9157698b77aa",
+      "status": "scraping",
+      "message": "Researching company pages",
+      "pages_completed": 6,
+      "created_at": "2026-10-20T01:26:51.0018+00:00"
+    },
+    {
+      "id": 63,
+      "job_id": "5668a6b6-602a-413c-b319-b03ac04db13b",
+      "project_id": "58bc6909-55c6-4b5f-b9da-9157698b77aa",
+      "status": "scraping",
+      "message": "Researching company pages",
+      "pages_completed": 8,
+      "created_at": "2026-10-20T01:26:58.164423+00:00"
+    },
+    {
+      "id": 64,
+      "job_id": "5668a6b6-602a-413c-b319-b03ac04db13b",
+      "project_id": "58bc6909-55c6-4b5f-b9da-9157698b77aa",
+      "status": "scraping",
+      "message": "Researching company pages",
+      "pages_completed": 9,
+      "created_at": "2026-10-20T01:27:05.833467+00:00"
+    },
+    {
+      "id": 65,
+      "job_id": "5668a6b6-602a-413c-b319-b03ac04db13b",
+      "project_id": "58bc6909-55c6-4b5f-b9da-9157698b77aa",
+      "status": "completed",
+      "message": "Company profile saved",
+      "pages_completed": 9,
+      "created_at": "2026-10-20T01:27:11.152049+00:00"
+    }
+  ],
+  "events_truncated": false
+}

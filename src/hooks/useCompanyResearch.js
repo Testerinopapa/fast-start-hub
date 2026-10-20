@@ -50,13 +50,13 @@ export default function useCompanyResearch(domain) {
         setData(result); failures = 0;
         setError(result.job.status === 'failed' ? new Error(result.job.error_message || 'Company research could not finish.') : null);
         if (!['completed', 'failed'].includes(result.job.status)) {
-          timer = setTimeout(() => poll(id), 5000);
+          timer = setTimeout(() => poll(id), 10000);
         }
       } catch (err) {
         if (!active || err.name === 'AbortError') return;
         setData(null); setError(err);
         if (!['UNAUTHORIZED', 'NOT_FOUND', 'PROJECT_MISMATCH'].includes(err.code) && failures++ < 4) {
-          timer = setTimeout(() => poll(id), Math.min(30000, 5000 * 2 ** failures));
+          timer = setTimeout(() => poll(id), Math.min(30000, 10000 * 2 ** failures));
         }
       }
     };

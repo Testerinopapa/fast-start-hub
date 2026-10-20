@@ -1,5 +1,5 @@
 import { adminClient, authenticate, endpoint, json, readBody, type Admin } from '../_shared/backend.ts';
-import { firecrawl } from '../_shared/firecrawl.ts';
+import { contextSearch, contextScrape } from '../_shared/context-dev.ts';
 import { isUuid, ResearchError } from '../_shared/research-core.ts';
 import { diagnosticState, eligibleCompanies, expired, extractPeople, freshPeople, nextPeopleStatus, peopleExtraction, peoplePages, peopleQuery,
   peopleSnapshot, resumable, savedCompanies, unfinished, type PeopleDiagnostic, type PeopleProfile, type PeopleState } from '../_shared/people-core.ts';
@@ -75,18 +75,18 @@ export const handler = endpoint(async req => {
   try {
     if (searching) {
       const query = peopleQuery(company, target, state.searches_used - 1);
-      const response = await firecrawl('/search', { query, limit: 5, sources: ['web'] });
-      if (!Array.isArray(response.data?.web)) throw new ResearchError('PROVIDER_RESPONSE', 'Contact page search returned an unreadable result.', 502);
+      const response = await contextSearch(query, { limit: 5 });
+      if (!Array.isArray(response.results)) throw new ResearchError('PROVIDER_RESPONSE', 'Contact page search returned an unreadable result.', 502);
       const events: PeopleDiagnostic[] = [];
-      const pages = peoplePages(state, response.data.web, [...company.source_urls, `https://${company.domain}/`], events);
+      const pages = peoplePages(state, response.results, [...company.source_urls, `https://${company.domain}/`], events);
       const urls = [...state.urls.slice(0, state.pages_attempted), ...pages];
       const next = diagnosticState({ ...state, urls, working: false }, [{ stage: 'search', outcome: 'completed', query,
-        result_count: response.data.web.length, accepted_count: pages.length, reason: 'Search responses ranked by source credibility and leadership relevance; retained public result titles and URLs.' }, ...events]);
+        result_count: response.results.length, accepted_count: pages.length, reason: 'Search responses ranked by source credibility and leadership relevance; retained public result titles and URLs.' }, ...events]);
       await save(db, profile, campaignId, { ...next, status: nextPeopleStatus(next),
         warnings: notes(state, pages.length ? [] : ['Search found no eligible unvisited source pages. See rejection reasons in Research notes.']) });
     } else {
-      const response = await firecrawl('/scrape', { url, onlyMainContent: true, formats: ['markdown', peopleExtraction(company)], parsers: [], timeout: 30000 }, 45000);
-      const extraction = extractPeople(state, url, response.data, target, company);
+      const page = await contextScrape(url, peopleExtraction(company));
+      const extraction = extractPeople(state, url, page, target, company);
       const visited = state.urls.slice(0, state.pages_attempted);
       const events: PeopleDiagnostic[] = [];
       const enriched = { ...state, company_linked_sources: extraction.companyLinked };

@@ -1,3 +1,5 @@
+> Provider migration: the provider setup and deployment instructions below are historical. See [Context.dev migration](context-dev-migration.md) for the current implementation.
+
 # Automatic Phase 3 campaigns
 
 Prepared locally; not deployed. Only the `campaigns` Edge Function and the frontend need publishing. No migration, new secrets, services, dependencies or Firecrawl calls are required.
