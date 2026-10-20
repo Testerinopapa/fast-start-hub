@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Licensed only for this standalone module; the rest of the repository is unchanged.
 /**
  * Explee Campaign Engine v1: local, deterministic, zero-credit audience suggestions.
  * Rules are intentionally visible/editable here. They never call an external AI API.
