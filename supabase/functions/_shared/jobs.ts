@@ -1,5 +1,5 @@
 import type { Admin } from './backend.ts';
-import { batchStatus } from './firecrawl.ts';
+import { contextBatchStatus } from './context-dev.ts';
 import { buildProfile, ResearchError } from './research-core.ts';
 
 export type Job = {
@@ -24,12 +24,12 @@ export async function reconcile(db: Admin, job: Job): Promise<Job> {
   if (!job.provider_job_id) {
     if (Date.now() - Date.parse(job.created_at) > 30 * 60 * 1000) {
       return await updateJob(db, job.id, 'failed', { p_error_code: 'START_INTERRUPTED',
-        p_error_message: 'Research did not start or its confirmation was lost. Check Firecrawl activity before retrying.' });
+        p_error_message: 'Research did not start or its confirmation was lost. Check Context.dev activity before retrying.' });
     }
     return job;
   }
   try {
-    const result = await batchStatus(job.provider_job_id);
+    const result = await contextBatchStatus(job.provider_job_id);
     const count = Math.min(10, Math.max(0, Number(result.completed) || 0));
     if (result.status === 'completed') {
       const profile = buildProfile(result.data, job.selected_urls);
@@ -37,12 +37,12 @@ export async function reconcile(db: Admin, job: Job): Promise<Job> {
     }
     if (['failed', 'cancelled'].includes(result.status)) {
       return await updateJob(db, job.id, 'failed', { p_completed: count,
-        p_error_code: 'CRAWL_FAILED', p_error_message: 'Firecrawl could not finish researching this website.' });
+        p_error_code: 'CRAWL_FAILED', p_error_message: 'Context.dev could not finish researching this website.' });
     }
     if (result.status !== 'scraping') throw new ResearchError('PROVIDER_RESPONSE', 'The provider returned an unknown job state.', 502);
     return await updateJob(db, job.id, 'scraping', { p_completed: count });
   } catch (error) {
-    if (error instanceof ResearchError && ['NO_USABLE_CONTENT', 'RESULT_EXPIRED'].includes(error.code)) {
+    if (error instanceof ResearchError && ['NO_USABLE_CONTENT', 'RESULT_EXPIRED', 'PROVIDER_CHANGED'].includes(error.code)) {
       return await updateJob(db, job.id, 'failed', { p_error_code: error.code, p_error_message: error.message });
     }
     throw error; // Transient polling failures must not destroy a running job.

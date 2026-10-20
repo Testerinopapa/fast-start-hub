@@ -1,3 +1,5 @@
+> Provider migration: the provider setup and deployment instructions below are historical. See [Context.dev migration](context-dev-migration.md) for the current implementation.
+
 # AutoGTM company research
 
 Phase 1 status: **deployed to the research project on 2026-10-12 with explicit owner approval.** Migrations `20261012000100` and `20261012000200` and the original four Edge Functions are live. The original login project's configuration was not changed.

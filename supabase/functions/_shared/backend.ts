@@ -52,15 +52,3 @@ export async function readBody(req: Request) {
   try { return JSON.parse(body) as Record<string, unknown>; }
   catch { throw new ResearchError('INVALID_REQUEST', 'Invalid JSON request.'); }
 }
-export async function callbackToken(jobId: string) {
-  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret('SUPABASE_SERVICE_ROLE_KEY')), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-  const bytes = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(`autogtm-webhook-v1:${jobId}`));
-  return Array.from(new Uint8Array(bytes), b => b.toString(16).padStart(2, '0')).join('');
-}
-export async function validCallback(jobId: string, actual: string | null) {
-  if (!actual || actual.length !== 64) return false;
-  const expected = await callbackToken(jobId);
-  let diff = 0;
-  for (let i = 0; i < expected.length; i++) diff |= actual.charCodeAt(i) ^ expected.charCodeAt(i);
-  return diff === 0;
-}

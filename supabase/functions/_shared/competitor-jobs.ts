@@ -1,6 +1,6 @@
-import { callbackToken, secret, type Admin } from './backend.ts';
-import { batchStatus, firecrawl } from './firecrawl.ts';
-import { isUuid, ResearchError } from './research-core.ts';
+import { secret, type Admin } from './backend.ts';
+import { contextBatchStatus, contextSearch, contextSubmit } from './context-dev.ts';
+import { ResearchError } from './research-core.ts';
 import { collectCandidates, competitorExtraction, competitorQueries, rankCompetitors, type CompanyProfile, type CompetitorState } from './competitor-core.ts';
 
 const LEASE_MS = 120_000;
@@ -40,7 +40,7 @@ export function competitorSnapshot(profile: CompanyProfile, state: CompetitorSta
 export async function reconcileCompetitors(db: Admin, profile: CompanyProfile, state: CompetitorState): Promise<CompetitorState> {
   if (state.status === 'completed' || !state.provider_job_id) return state;
   try {
-    const result = await batchStatus(state.provider_job_id);
+    const result = await contextBatchStatus(state.provider_job_id);
     const pages_completed = Math.min(state.candidates.length, Math.max(state.pages_completed, Number(result.completed) || 0));
     if (result.status === 'completed') {
       if (!result.data.some((page: { markdown?: string }) => page.markdown?.trim())) {
@@ -50,11 +50,11 @@ export async function reconcileCompetitors(db: Admin, profile: CompanyProfile, s
       return (await save(db, profile, state, { status: 'completed', results, pages_completed, error: null, error_code: null,
         warnings: results.length < state.candidates.length ? warnings(state, 'Some candidates lacked readable, relevant first-party evidence and were omitted.') : state.warnings })).state;
     }
-    if (['failed', 'cancelled'].includes(result.status)) throw new ResearchError('CRAWL_FAILED', 'Firecrawl could not finish researching the competitors.', 422);
+    if (['failed', 'cancelled'].includes(result.status)) throw new ResearchError('CRAWL_FAILED', 'Context.dev could not finish researching the competitors.', 422);
     if (result.status !== 'scraping') throw new ResearchError('PROVIDER_RESPONSE', 'The provider returned an unknown competitor job state.', 502);
     return (await save(db, profile, state, { status: 'scraping', pages_completed, error: null, error_code: null })).state;
   } catch (error) {
-    if (error instanceof ResearchError && ['RESULT_EXPIRED', 'NO_USABLE_CONTENT', 'CRAWL_FAILED'].includes(error.code)) {
+    if (error instanceof ResearchError && ['RESULT_EXPIRED', 'NO_USABLE_CONTENT', 'CRAWL_FAILED', 'PROVIDER_CHANGED'].includes(error.code)) {
       return (await save(db, profile, state, { status: 'failed', error: error.message, error_code: error.code })).state;
     }
     throw error; // A temporary polling failure must not discard a running provider job.
@@ -80,12 +80,12 @@ export async function advanceCompetitors(db: Admin, profile: CompanyProfile, ret
   if (state.batch_attempted) {
     if (!stale(state) || state.status === 'failed') return state;
     return (await save(db, profile, state, { status: 'failed', error_code: 'CONFIRMATION_MISSING',
-      error: 'The competitor scrape was submitted but its confirmation was lost. Check Firecrawl activity; it will not be submitted twice.' })).state;
+      error: 'The competitor scrape was submitted but its confirmation was lost. Check Context.dev activity; it will not be submitted twice.' })).state;
   }
   if (state.status === 'failed' && (!retry || !canRetry(state))) return state;
   if (state.working && !stale(state)) return state;
   const queries = state.queries.length ? state.queries : competitorQueries(profile);
-  secret('FIRECRAWL_API_KEY');
+  secret('CONTEXT_DEV_API_KEY');
 
   if (state.searches_used < queries.length) {
     const query = queries[state.searches_used];
@@ -96,11 +96,11 @@ export async function advanceCompetitors(db: Admin, profile: CompanyProfile, ret
     state = claim.state;
     try {
       // Search snippets only. Scraping search results here would multiply credit use.
-      const result = await firecrawl('/search', { query, limit: 8, sources: ['web'] });
-      if (!Array.isArray(result.data?.web)) throw new ResearchError('PROVIDER_RESPONSE', 'The provider returned an invalid competitor search result.', 502);
-      const candidates = collectCandidates(profile, state.candidates, result.data.web);
+      const result = await contextSearch(query);
+      if (!Array.isArray(result.results)) throw new ResearchError('PROVIDER_RESPONSE', 'The provider returned an invalid competitor search result.', 502);
+      const candidates = collectCandidates(profile, state.candidates, result.results);
       console.info(JSON.stringify({ event: 'competitor_search', job_id: profile.job_id, query,
-        results: result.data.web.length, retained_candidates: candidates.length }));
+        results: result.results.length, retained_candidates: candidates.length }));
       return (await save(db, profile, state, { working: false, candidates,
         search_successes: (state.search_successes || 0) + 1 })).state;
     } catch (error) {
@@ -119,30 +119,13 @@ export async function advanceCompetitors(db: Admin, profile: CompanyProfile, ret
   if (!claim.applied) return claim.state;
   state = claim.state;
   try {
-    const token = await callbackToken(`${profile.job_id}:competitors`);
-    const batch = await firecrawl('/batch/scrape', {
-      urls: state.candidates.map(candidate => candidate.url), maxConcurrency: 2, ignoreInvalidURLs: false,
-      onlyMainContent: true, formats: ['markdown', competitorExtraction], parsers: [], timeout: 30000,
-      webhook: { url: `${secret('SUPABASE_URL')}/functions/v1/firecrawl-webhook?job_id=${profile.job_id}&stage=competitors`,
-        headers: { 'x-autogtm-token': token }, events: ['started', 'completed', 'failed'] },
-    });
-    if (!isUuid(batch.id)) throw new ResearchError('PROVIDER_RESPONSE', 'The provider did not confirm the competitor scrape.', 502);
+    const batch = await contextSubmit(state.candidates.map(candidate => candidate.url), competitorExtraction,
+      `competitors:${profile.job_id}:${state.run || 1}`);
     return (await save(db, profile, state, { status: 'scraping', provider_job_id: batch.id })).state;
   } catch (error) {
-    // A lost POST response can still mean a paid job exists. Its authenticated
-    // webhook may recover the ID; never blindly POST the batch again.
+    // A lost POST response can still mean a paid job exists. Missing
+    // confirmation must be checked in Context.dev; never blindly POST again.
     if (!(error instanceof ResearchError) || ['PROVIDER_UNAVAILABLE', 'PROVIDER_RESPONSE', 'SAVE_FAILED'].includes(error.code)) return state;
     return (await save(db, profile, state, { status: 'failed', error_code: error.code, error: error.message })).state;
   }
-}
-
-export async function competitorCallback(db: Admin, jobId: string, providerId: string) {
-  const profile = await findCompetitorProfile(db, jobId);
-  let state = profile.competitor_research;
-  if (!state.batch_attempted || (state.provider_job_id && state.provider_job_id !== providerId)) {
-    throw new ResearchError('INVALID_REQUEST', 'Competitor job ID mismatch.');
-  }
-  if (state.status === 'completed') return;
-  if (!state.provider_job_id) state = (await save(db, profile, state, { status: 'scraping', provider_job_id: providerId, error: null, error_code: null })).state;
-  await reconcileCompetitors(db, profile, state);
 }

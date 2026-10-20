@@ -76,7 +76,7 @@ with sync_playwright() as p:
                 'status': state['competitors'], 'queries': ['useful widget alternatives'], 'searches_used': 1,
                 'candidates_count': 1, 'pages_completed': 1 if state['competitors'] == 'completed' else 0,
                 'results': state['competitor_results'] if state['competitors'] == 'completed' else [], 'warnings': [],
-                'error': 'Firecrawl is busy. Please retry.' if state['competitors'] == 'failed' else None, 'can_retry': True}}
+                'error': 'Context.dev is busy. Please retry.' if state['competitors'] == 'failed' else None, 'can_retry': True}}
         elif path.endswith('/campaigns'):
             body = req.post_data_json
             assert body['job_id'] == JOB
@@ -180,7 +180,7 @@ with sync_playwright() as p:
     expect(page.locator('main').get_by_text('langly.es', exact=True)).to_have_count(0)
     check_width(page)
     state['competitors'] = 'failed'
-    expect(page.get_by_role('alert')).to_contain_text('Firecrawl is busy', timeout=12000)
+    expect(page.get_by_role('alert')).to_contain_text('Context.dev is busy', timeout=12000)
     state['competitors'] = 'completed'
     page.get_by_role('button', name='Retry research').click()
     expect(page.locator('main').get_by_role('link', name='real-rival.com', exact=True)).to_be_visible(timeout=10000)

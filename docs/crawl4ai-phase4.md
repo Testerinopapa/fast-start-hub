@@ -1,3 +1,5 @@
+> Provider migration: the provider setup and deployment instructions below are historical. See [Context.dev migration](context-dev-migration.md) for the current implementation.
+
 # Crawl4AI Cloud — Phase 4 opt-in integration
 
 The Phase 4 Edge Function can use Crawl4AI Cloud for search and scraping while keeping the original Firecrawl implementation as the default. This integration does **not** replace the other Firecrawl-powered phases.

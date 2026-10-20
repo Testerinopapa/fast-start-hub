@@ -1,3 +1,5 @@
+> Provider migration: the provider setup and deployment instructions below are historical. See [Context.dev migration](context-dev-migration.md) for the current implementation.
+
 # Empty competitors and campaigns: recovery
 
 Read-only inspection on October 14, 2026 found two independent failures in the saved YouTube project:

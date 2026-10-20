@@ -1,3 +1,5 @@
+> Provider migration: the provider setup and deployment instructions below are historical. See [Context.dev migration](context-dev-migration.md) for the current implementation.
+
 # Phase 4: discovery and enrichment
 
 Prepared locally; not deployed. Publish only after approval. No new tables, migrations, secrets, services or dependencies are needed. Existing ownership checks, the `company_profiles.company_discovery` JSON column and the service-role-only compare-and-swap RPC are reused.

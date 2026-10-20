@@ -1,3 +1,5 @@
+> Provider migration: the provider setup and deployment instructions below are historical. See [Context.dev migration](context-dev-migration.md) for the current implementation.
+
 # Phase 5: broader professional sources
 
 Prepared locally; not deployed. Keep the existing Supabase/Firecrawl integrations and Phase 5 table. Apply the incremental migration and redeploy only `people-discovery` after approval.

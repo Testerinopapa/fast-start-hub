@@ -1,3 +1,5 @@
+> Provider migration: the provider setup and deployment instructions below are historical. See [Context.dev migration](context-dev-migration.md) for the current implementation.
+
 # Context.dev evaluation
 
 The project uses React/Vite with npm and server-side Supabase Deno functions.

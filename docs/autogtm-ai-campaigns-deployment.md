@@ -1,3 +1,5 @@
+> Provider migration: the provider setup and deployment instructions below are historical. See [Context.dev migration](context-dev-migration.md) for the current implementation.
+
 # Phase 3: Claude campaign generation
 
 Prepared locally; not deployed. The user clarified that the provider is **Claude through OpenRouter**, superseding the conflicting Gemini instructions. The implementation uses `OPENROUTER_API_KEY`, not `GEMINI_API_KEY`. No supplied credential is stored in source, frontend configuration, migrations or this document.
