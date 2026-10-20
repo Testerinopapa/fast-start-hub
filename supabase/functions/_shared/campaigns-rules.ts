@@ -136,9 +136,19 @@ export function classifyCampaignCapabilities(profile: CampaignProfile): Hit[] {
       else detailScore += 2;
       if (evidence.length < 6) evidence.push({ id: 'company:product:' + index, urls: statedUrls.length ? statedUrls : companyUrls });
     }
+    // Multiple independent first-party descriptions can establish a primary capability
+    // even when product names are generic (e.g. product plans called Free or Teams).
+    let descriptionsScore = 0;
+    for (const [index, description] of (profile.descriptions || []).slice(0, 12).entries()) {
+      const urls = ownUrls(description.source_urls);
+      if (!urls.length || (companyUrls.length && urls.some(url => new URL(url).hostname.replace(/^www\./, '') !== new URL(companyUrls[0]).hostname.replace(/^www\./, '')))) continue;
+      if (!re.test(copy(description.text))) continue;
+      descriptionsScore += 5;
+      if (evidence.length < 6) evidence.push({ id: 'company:description:' + index, urls });
+    }
     const offeringMatch = !!copy(profile.business_description) && re.test(copy(profile.business_description));
     if (offeringMatch) evidence.unshift({ id: 'company:offering', urls: companyUrls });
-    const score = Math.min(nameScore, 35) + Math.min(detailScore, 6) + (offeringMatch ? 9 : 0);
+    const score = Math.min(nameScore, 35) + Math.min(detailScore, 6) + Math.min(descriptionsScore, 15) + (offeringMatch ? 9 : 0);
     if (score >= 9 && evidence.length) results.push({ capability, score, evidence: evidence.slice(0, 6) });
   }
   return results.sort((a, b) => b.score - a.score || a.capability.localeCompare(b.capability));
