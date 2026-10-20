@@ -1,6 +1,6 @@
 import { adminClient, authenticate, endpoint, json, readBody, type Admin } from '../_shared/backend.ts';
 import { campaignFields, campaignTargets, withoutCampaignTemplates, type Campaign, type CampaignPlan, type CampaignProfile } from '../_shared/campaigns-core.ts';
-import { CAMPAIGN_MODEL, campaignApiKey, campaignContext, generateAiCampaigns, type Generation } from '../_shared/campaigns-ai.ts';
+import { CAMPAIGN_MODEL, generateRuleCampaigns, type Generation } from '../_shared/campaigns-rules.ts';
 import { isUuid, ResearchError } from '../_shared/research-core.ts';
 
 async function save(db: Admin, profile: CampaignProfile, version: number, plan: CampaignPlan) {
@@ -25,7 +25,7 @@ export const handler = endpoint(async (req) => {
   if (job?.status !== 'completed') throw new ResearchError('RESEARCH_PENDING', 'Finish company research before defining campaigns.', 409);
   const { data: project, error: projectError } = await db.from('projects').select('*').eq('id', profile.project_id).eq('owner_id', ownerId).maybeSingle();
   if (projectError || !project) throw new ResearchError('DATABASE_UNAVAILABLE', 'Could not load campaign generation state.', 503);
-  if (!Object.hasOwn(project, 'campaign_generation')) throw new ResearchError('NOT_DEPLOYED', 'The AI campaign generation migration has not been deployed.', 503);
+  if (!Object.hasOwn(project, 'campaign_generation')) throw new ResearchError('NOT_DEPLOYED', 'The campaign generation migration has not been deployed.', 503);
   let generation = project.campaign_generation as Generation | null;
   let plan: CampaignPlan = profile.campaign_plan || { status: 'completed', version: 0, campaigns: [], selected_ids: [], warnings: [] };
   if (!profile.campaign_plan) plan = (await save(db, profile, 0, plan)).plan;
@@ -37,12 +37,9 @@ export const handler = endpoint(async (req) => {
   const stale = generation?.status === 'running' && Date.now() - Date.parse(generation.started_at) > 120000;
   if (action === 'regenerate' || (action === 'load' && ((body.auto_generate === true && !generation?.auto_attempted) || stale))) {
     if (action === 'regenerate' && (!isUuid(body.request_id) || !Number.isInteger(body.version))) throw new ResearchError('INVALID_REQUEST', 'A regeneration request ID and saved version are required.');
-    // Validate prerequisites before reserving; no provider request occurs for
-    // missing configuration or an empty research profile.
-    let key = '';
+    // A local rules engine does not need credentials, model quotas or network access.
     try {
       if (!stale || action === 'regenerate') {
-        key = campaignApiKey(); campaignContext(profile);
         if (plan.campaigns.filter(c => c.origin !== 'suggested').length > 8) throw new ResearchError('CAMPAIGN_LIMIT', 'Keep at most eight custom or edited campaigns to leave room for four suggestions.');
       }
       const { data: claim, error: claimError } = await db.rpc('autogtm_claim_campaign_generation', {
@@ -53,22 +50,17 @@ export const handler = endpoint(async (req) => {
       if (claimError) {
         if (claimError.message.includes('CAMPAIGN_CONFLICT')) throw new ResearchError('CONFLICT', 'Campaigns changed in another tab. Reload before regenerating.', 409);
         if (claimError.message.includes('CAMPAIGN_LIMIT')) throw new ResearchError('CAMPAIGN_LIMIT', 'Keep at most eight custom campaigns to leave room for new suggestions.');
-        throw new ResearchError('SAVE_FAILED', 'Could not reserve campaign generation. No model request was sent.', 503);
+        throw new ResearchError('SAVE_FAILED', 'Could not reserve campaign generation. No campaigns were generated.', 503);
       }
       plan = claim.plan; generation = claim.generation;
       if (claim.claimed) {
         let campaigns: Campaign[] | null = null, failure: string | null = null;
-        try { campaigns = await generateAiCampaigns({ ...profile, campaign_plan: plan }, key, async diagnostic => {
-          const { error } = await db.rpc('autogtm_record_campaign_diagnostic', {
-            p_job: profile.job_id, p_owner: ownerId, p_request: generation!.request_id, p_diagnostic: diagnostic,
-          });
-          if (error) throw new ResearchError('SAVE_FAILED', 'Could not save the Claude response diagnostic. Confirm the campaign diagnostics migration is deployed. The model request will not repeat automatically.', 503);
-        }); }
-        catch (error) { failure = error instanceof ResearchError ? error.message : 'Campaign generation was interrupted. Your saved campaigns are unchanged.'; }
+        try { campaigns = generateRuleCampaigns({ ...profile, campaign_plan: plan }); }
+        catch (error) { failure = error instanceof ResearchError ? error.message : 'Local campaign generation was interrupted. Your saved campaigns are unchanged.'; }
         const { data: finished, error: finishError } = await db.rpc('autogtm_finish_campaign_generation', {
           p_job: profile.job_id, p_owner: ownerId, p_request: generation!.request_id, p_campaigns: campaigns, p_error: failure,
         });
-        if (finishError) throw new ResearchError('SAVE_FAILED', 'Could not finish saving campaign generation. Reload saved progress; the model request will not be repeated automatically.', 503);
+        if (finishError) throw new ResearchError('SAVE_FAILED', 'Could not finish saving generated campaigns. Reload saved progress before trying again.', 503);
         plan = finished.plan; generation = finished.generation;
       }
     } catch (error) {
