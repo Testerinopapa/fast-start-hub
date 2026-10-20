@@ -1,12 +1,13 @@
 import { getDomain } from 'npm:tldts@7.4.18';
-import { companyUrl, domainOf, ResearchError } from './research-core.ts';
+import { companyUrl, domainOf, isCompanySource, ResearchError } from './research-core.ts';
 
 export type CompanyProfile = {
   job_id: string; project_id: string; owner_id: string; company_name: string | null;
   business_description: string | null; products: Fact[]; customers: Fact[];
   source_urls: string[]; competitor_research: CompetitorState;
+  descriptions?: { text: string; source_urls: string[] }[];
 };
-type Fact = { name: string; description?: string | null; source_urls?: string[]; evidence_quote?: string };
+type Fact = { name: string; description?: string | null; source_urls?: string[]; evidence_quote?: string; kind?: string };
 export type Candidate = { domain: string; url: string; discovery_urls: string[]; relevance: number };
 export type Competitor = {
   domain: string; name: string | null; description: string | null;
@@ -22,7 +23,7 @@ export type CompetitorState = {
   run?: number;
 };
 const clean = (value: unknown, max = 1500) => typeof value === 'string' ? value.trim().slice(0, max) : '';
-const stop = new Set('a an the and or is are be to of for in on with by at from that this their your our its as it through using users user offers offer company business platform service services product products solution solutions software app application tool tools provides provide designed helps help includes include online best alternative alternatives more all can which has have'.split(' '));
+const stop = new Set('a an the and or is are be to of for in on with by at from that this their your our its as it through using users user offers offer company business platform service services product products solution solutions software app application tool tools provides provide designed helps help includes include online best alternative alternatives more all can which has have give gives complete control customization streamline process enhance productivity built time save'.split(' '));
 const words = (value: string) => value.toLowerCase().match(/[\p{L}\p{N}]+/gu) || [];
 const synonyms: Record<string, string> = { gamified: 'game', gaming: 'game', games: 'game', learners: 'learn', learning: 'learn', students: 'student', teachers: 'teacher' };
 const terms = (value: string) => [...new Set(words(value).filter(word => word.length > 2 && !stop.has(word))
@@ -31,13 +32,45 @@ const factText = (facts: Fact[] = []) => facts.map(f => `${f.name} ${f.descripti
 
 // Creator content on a hosting platform describes the creator, not the platform's customers.
 export function businessFacts(facts: Fact[]): Fact[] {
-  return facts.filter(fact => !fact.source_urls?.length || fact.source_urls.some(source => {
-    try {
-      const url = new URL(source), host = url.hostname.replace(/^www\./, '');
-      return host !== 'youtu.be' && !(host === 'youtube.com' &&
-        /^\/(?:@|watch(?:\/|$)|shorts(?:\/|$)|channel(?:\/|$)|c\/|user\/|playlist(?:\/|$)|results(?:\/|$))/i.test(url.pathname));
-    } catch { return false; }
-  }));
+  return facts.filter(fact => !fact.source_urls?.length || fact.source_urls.some(isCompanySource))
+    .map(fact => ({ ...fact, ...(fact.source_urls ? { source_urls: fact.source_urls.filter(isCompanySource) } : {}) }));
+}
+
+export function companyDescription(profile: CompanyProfile): string {
+  if (profile.descriptions?.length) return profile.descriptions.find(item => item.source_urls.some(isCompanySource))?.text || '';
+  return profile.source_urls.some(isCompanySource) ? profile.business_description || '' : '';
+}
+function audienceFacts(facts: Fact[]) {
+  return businessFacts(facts).filter(fact => fact.kind === 'customer_segment' || (!fact.kind &&
+    /\b(?:teams?|professionals?|businesses|agencies|recruiters?|teachers?|students?|schools?|developers?|companies|enterprises|tutors?|learners?)\b/i.test(fact.name)));
+}
+
+// Functional categories group synonymous product uses, not generic marketing words.
+const categories = [
+  { name: 'appointment scheduling software', pattern: /(?:schedul(?:ing|er)|booking).{0,45}(?:tool|software|platform|automation|page|builder)|(?:appointment|meeting|team|service.based|online).{0,25}(?:schedul(?:ing|er)|booking)/i },
+  { name: 'video conferencing software', pattern: /video conferenc|(?:online|virtual|video) meetings?/i },
+  { name: 'customer relationship management software', pattern: /customer relationship management|\bcrm\s+(?:software|platform|tool)/i },
+  { name: 'email marketing software', pattern: /email marketing|newsletter (?:software|platform|automation)/i },
+  { name: 'language learning software', pattern: /(?:language|english|vocabulary).{0,30}(?:learn|game|teach)|(?:learn|teach).{0,30}(?:english|language|vocabulary)/i },
+];
+const categoryNames = (text: string) => categories.filter(category => category.pattern.test(text)).map(category => category.name);
+
+export function competitorFit(profile: CompanyProfile, company: Pick<Competitor, 'description' | 'products' | 'features' | 'customers' | 'pricing'>) {
+  const context = companyContext(profile);
+  const original = `${companyDescription(profile)} ${factText(businessFacts(profile.products))}`;
+  const offering = `${company.description || ''} ${factText(company.products)} ${factText(company.features)} ${factText(company.pricing)}`;
+  const sharedCategories = categoryNames(original).filter(category => categoryNames(offering).includes(category));
+  const productTerms = terms(offering), audienceTerms = terms(factText(audienceFacts(company.customers)));
+  const matchedProduct = context.product.filter(term => productTerms.includes(term));
+  const matchedAudience = context.audience.filter(term => audienceTerms.includes(term));
+  const coverage = matchedProduct.length / Math.max(1, Math.min(context.product.length, 12));
+  const direct = sharedCategories.length > 0 || (matchedProduct.length >= 2 && coverage >= 0.3 && matchedAudience.length > 0);
+  return { relationship: direct ? 'direct' as const : 'related' as const,
+    relevance_score: sharedCategories.length ? Math.min(100, 75 + sharedCategories.length * 5 + Math.min(matchedAudience.length, 3) * 5)
+      : Math.min(direct ? 79 : 59, Math.round(coverage * 65 + Math.min(matchedAudience.length, 3) * 10)),
+    ranking_reason: `${sharedCategories.length ? `Same evidenced product category: ${sharedCategories.join(', ')}.` : `Shared product terms: ${matchedProduct.join(', ') || 'none'}.`}${matchedAudience.length ? ` Shared customer-segment terms: ${matchedAudience.join(', ')}.` : ' Customer overlap is unknown; missing customer lists do not rule out product competition.'}`,
+    supported: sharedCategories.length > 0 || matchedProduct.length >= 2,
+  };
 }
 
 export function businessDomain(value: string) {
@@ -48,8 +81,8 @@ export function businessDomain(value: string) {
 }
 export function companyContext(profile: CompanyProfile) {
   const brand = new Set(terms(`${profile.company_name || ''} ${profile.source_urls.map(url => businessDomain(url)).join(' ')}`));
-  const product = terms(`${factText(businessFacts(profile.products))} ${profile.business_description || ''}`).filter(word => !brand.has(word));
-  const audience = terms(factText(businessFacts(profile.customers))).filter(word => !brand.has(word));
+  const product = terms(`${companyDescription(profile)} ${factText(businessFacts(profile.products))}`).filter(word => !brand.has(word));
+  const audience = terms(factText(audienceFacts(profile.customers))).filter(word => !brand.has(word));
   return { product, audience };
 }
 export function competitorQueries(profile: CompanyProfile): string[] {
@@ -57,9 +90,10 @@ export function competitorQueries(profile: CompanyProfile): string[] {
   if (product.length < 2) throw new ResearchError('INSUFFICIENT_PROFILE', 'The company profile needs a clearer product description before competitor discovery.', 422);
   const name = clean(profile.company_name, 100).replace(/[^\p{L}\p{N} .-]/gu, '') || businessDomain(profile.source_urls[0]);
   const exclusions = ' -inurl:blog -inurl:alternatives -inurl:learn -site:quora.com -site:reddit.com';
+  const category = categoryNames(`${companyDescription(profile)} ${factText(businessFacts(profile.products))}`)[0];
   return [...new Set([
-    `${product.slice(0, 7).join(' ')} platforms${exclusions}`,
-    `${product.slice(0, 4).join(' ')} ${audience.slice(0, 5).join(' ') || product.slice(4, 9).join(' ')} providers${exclusions}`.replace(/\s+/g, ' '),
+    `${category || product.slice(0, 7).join(' ')} platforms${exclusions}`,
+    `${category || product.slice(0, 4).join(' ')} ${audience.slice(0, 5).join(' ') || 'business teams'} providers${exclusions}`.replace(/\s+/g, ' '),
     `"${name}" alternatives`,
   ])].slice(0, 3);
 }
@@ -72,17 +106,18 @@ export function collectCandidates(profile: CompanyProfile, current: Candidate[],
     try {
       const url = companyUrl(raw.url);
       const domain = businessDomain(url.href);
-      if (own.has(domain) || excluded.has(domain) || /\.(pdf|zip|png|jpe?g|mp4)$/i.test(url.pathname)) continue;
+      if (own.has(domain) || excluded.has(domain) || domain === 'gartner.com' || /(?:alternatives?|glopalstore)\./i.test(domain) || !isCompanySource(url.href) || /\.(pdf|zip|png|jpe?g|mp4)$/i.test(url.pathname)) continue;
       if (/\/(?:blog|learn|articles?|categories)\//i.test(url.pathname) || /alternatives?|websites-like/i.test(url.pathname)) continue;
       const text = terms(`${clean(raw.title)} ${clean(raw.description)}`);
       const relevance = context.product.filter(t => text.includes(t)).length * 3 + context.audience.filter(t => text.includes(t)).length;
       const previous = found.get(domain);
       if (previous) {
+        if (relevance > previous.relevance) previous.url = url.href;
         previous.relevance = Math.max(previous.relevance, relevance);
         previous.discovery_urls = [...new Set([...previous.discovery_urls, url.href])].slice(0, 3);
       } else {
         // One first-party page per business: no additional Map/crawl/search calls.
-        found.set(domain, { domain, url: url.origin + '/', discovery_urls: [url.href], relevance });
+        found.set(domain, { domain, url: url.href, discovery_urls: [url.href], relevance });
       }
     } catch { /* Skip unsafe or malformed search links. */ }
   }
@@ -105,7 +140,6 @@ export const competitorExtraction = {
 const evidenceText = (value: string) => words(value).join(' ');
 
 export function rankCompetitors(profile: CompanyProfile, candidates: Candidate[], pages: unknown[]): Competitor[] {
-  const context = companyContext(profile);
   const own = new Set(profile.source_urls.map(businessDomain));
   const results = new Map<string, Competitor>();
   const rejected: Record<string, number> = {};
@@ -118,7 +152,7 @@ export function rankCompetitors(profile: CompanyProfile, candidates: Candidate[]
       const candidate = candidates.find(c => c.domain === businessDomain(source));
       if (!candidate) { reject('unmatched_domain'); continue; }
       const finalSource = page.metadata?.url || source;
-      if (businessDomain(finalSource) !== candidate.domain || own.has(candidate.domain)) { reject('redirect_or_own_domain'); continue; }
+      if (businessDomain(finalSource) !== candidate.domain || own.has(candidate.domain) || !isCompanySource(finalSource)) { reject('redirect_or_own_domain'); continue; }
       const data = page.json;
       if (!data || data.is_business_website !== true) { reject('not_business_website'); continue; }
       const evidence = evidenceText(page.markdown);
@@ -136,19 +170,12 @@ export function rankCompetitors(profile: CompanyProfile, candidates: Candidate[]
       const summary = description && supported(description.evidence_quote) ? clean(description.evidence_quote, 600) : null;
       const products = facts('products'), customers = facts('customers'), features = facts('features'), pricing = facts('pricing');
       if (!summary && !products.length) { reject('unsupported_description_or_products'); continue; }
-      const productTerms = terms(`${summary || ''} ${factText(products)} ${factText(features)}`);
-      const audienceTerms = terms(factText(customers));
-      const matchedProduct = context.product.filter(t => productTerms.includes(t));
-      const matchedAudience = context.audience.filter(t => audienceTerms.includes(t));
-      if (!matchedProduct.length || (matchedProduct.length === 1 && matchedProduct[0].length < 4)) { reject('no_product_overlap'); continue; }
-      const coverage = matchedProduct.length / Math.max(1, Math.min(context.product.length, 12));
-      const direct = matchedProduct.length >= 2 && coverage >= 0.3 && matchedAudience.length > 0;
-      const score = Math.min(100, Math.round(coverage * 65 + Math.min(matchedAudience.length, 3) * 10));
+      const fit = competitorFit(profile, { description: summary, products, customers, features, pricing });
+      if (!fit.supported) { reject('no_product_overlap'); continue; }
       const name = clean(data.company_name, 200);
       const company: Competitor = { domain: candidate.domain, name: name && evidence.includes(evidenceText(name)) ? name : null,
-        description: summary, products, customers, features, pricing, source_urls: [finalSource], relevance_score: score,
-        relationship: direct ? 'direct' : 'related',
-        ranking_reason: `Shared product terms: ${matchedProduct.join(', ')}.${matchedAudience.length ? ` Shared audience terms: ${matchedAudience.join(', ')}.` : ' No shared audience confirmed.'}` };
+        description: summary, products, customers, features, pricing, source_urls: [finalSource], relevance_score: fit.relevance_score,
+        relationship: fit.relationship, ranking_reason: fit.ranking_reason };
       results.set(candidate.domain, company);
     } catch { reject('invalid_page'); }
   }

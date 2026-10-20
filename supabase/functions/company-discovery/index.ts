@@ -1,5 +1,6 @@
 import { adminClient, authenticate, endpoint, json, readBody, secret, type Admin } from '../_shared/backend.ts';
 import { firecrawl } from '../_shared/firecrawl.ts';
+import { contextSearch } from '../_shared/context-dev.ts';
 import { crawl4aiSearch, crawl4aiScrape } from '../_shared/crawl4ai.ts';
 import { isUuid, ResearchError } from '../_shared/research-core.ts';
 import { canResume, candidateResults, discoveryCandidates, discoveryExtraction, discoverySnapshot, enrichCompany, newDiscovery, running, stale,
@@ -16,16 +17,18 @@ async function save(db: Admin, profile: DiscoveryProfile, campaignId: string, ve
 }
 const warning = (state: Discovery, message: string) => [...new Set([...state.warnings, message])].slice(-10);
 
-// One provider request per advance. Reserve its budget before sending it; a lost
-// response is never automatically submitted again, including after a refresh.
+// One logical provider operation per advance. Reserve its budget before sending
+// it; Context retries only explicit transient HTTP responses, not lost responses.
 async function advance(db: Admin, profile: DiscoveryProfile, campaignId: string, state: Discovery): Promise<Discovery> {
   if (!running(state) || (state.working && !stale(state))) return state;
-  // Both providers retain the existing reservation, three-search and ten-page caps.
+  // Providers retain the existing reservation, three-search and ten-page caps.
   // Crawl4AI Cloud is opt-in; self-hosting requires a separate search backend.
   const useCrawl4AI = Deno.env.get('AUTOGTM_DISCOVERY_PROVIDER') === 'crawl4ai';
-  if (!useCrawl4AI) secret('FIRECRAWL_API_KEY');
+  const useContextSearch = Deno.env.get('AUTOGTM_SEARCH_PROVIDER') === 'context';
   const interrupted = state.working ? warning(state, 'An interrupted request was counted toward the limit and was not repeated.') : state.warnings;
   const search = state.searches_used < state.queries.length;
+  if (search && useContextSearch) secret('CONTEXT_DEV_API_KEY');
+  else if (!useCrawl4AI) secret('FIRECRAWL_API_KEY');
   const candidate = state.candidates[state.pages_attempted];
   if (!search && !candidate) return (await save(db, profile, campaignId, state.version, {
     ...state, status: 'completed', working: false, warnings: interrupted,
@@ -39,7 +42,8 @@ async function advance(db: Admin, profile: DiscoveryProfile, campaignId: string,
   state = claim.state;
   try {
     if (search) {
-      const links = useCrawl4AI ? await crawl4aiSearch(query) : (await firecrawl('/search', { query, limit: 8, sources: ['web'] })).data?.web;
+      const links = useContextSearch ? (await contextSearch(query)).results
+        : useCrawl4AI ? await crawl4aiSearch(query) : (await firecrawl('/search', { query, limit: 8, sources: ['web'] })).data?.web;
       if (!Array.isArray(links)) throw new ResearchError('PROVIDER_RESPONSE', 'Company search returned unreadable results.', 502);
       const events: DiscoveryEvent[] = [];
       const candidates = discoveryCandidates(state, links, events);

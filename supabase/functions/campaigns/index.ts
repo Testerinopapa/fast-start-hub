@@ -58,7 +58,12 @@ export const handler = endpoint(async (req) => {
       plan = claim.plan; generation = claim.generation;
       if (claim.claimed) {
         let campaigns: Campaign[] | null = null, failure: string | null = null;
-        try { campaigns = await generateAiCampaigns({ ...profile, campaign_plan: plan }, key); }
+        try { campaigns = await generateAiCampaigns({ ...profile, campaign_plan: plan }, key, async diagnostic => {
+          const { error } = await db.rpc('autogtm_record_campaign_diagnostic', {
+            p_job: profile.job_id, p_owner: ownerId, p_request: generation!.request_id, p_diagnostic: diagnostic,
+          });
+          if (error) throw new ResearchError('SAVE_FAILED', 'Could not save the Claude response diagnostic. Confirm the campaign diagnostics migration is deployed. The model request will not repeat automatically.', 503);
+        }); }
         catch (error) { failure = error instanceof ResearchError ? error.message : 'Campaign generation was interrupted. Your saved campaigns are unchanged.'; }
         const { data: finished, error: finishError } = await db.rpc('autogtm_finish_campaign_generation', {
           p_job: profile.job_id, p_owner: ownerId, p_request: generation!.request_id, p_campaigns: campaigns, p_error: failure,
