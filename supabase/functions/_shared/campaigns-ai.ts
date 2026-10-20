@@ -2,7 +2,7 @@ import { campaignFields, isGenericCampaignAudience, type Campaign, type Campaign
 import { ResearchError } from './research-core.ts';
 import { businessFacts } from './competitor-core.ts';
 
-export const CAMPAIGN_MODEL = 'qwen/qwen3.8-27b:free';
+export const CAMPAIGN_MODEL = 'openrouter/free';
 export type Generation = { status: 'running' | 'completed' | 'failed'; request_id: string; job_id: string;
   auto_attempted: boolean; attempts: number; started_at: string; error?: string | null; model?: string };
 const clean = (value: unknown, max = 600) => typeof value === 'string' ? value.trim().slice(0, max) : '';

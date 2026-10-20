@@ -1,0 +1,726 @@
+{
+  "format": "autogtm.project-export",
+  "schema_version": 1,
+  "exported_at": "2026-10-14T17:25:08.238Z",
+  "scope": {
+    "research_job_id": "4a963ebe-5c86-4f13-baee-80f40e98da60",
+    "saved_results_only": true,
+    "notes": [
+      "Contains the selected research job and all of its saved campaigns and discovery results, not other research jobs for this website.",
+      "Missing stages are absent or null; unfinished stages retain their saved status. No research was started or retried for this export.",
+      "Project-level campaign_generation identifies the job used by the latest generation attempt, which may differ from this exported job.",
+      "Records were read independently; a workflow running in another tab may change them during export.",
+      "Includes saved diagnostics only, not Edge Function console logs or raw provider responses."
+    ]
+  },
+  "project": {
+    "id": "2ec337ca-9170-4582-9496-1e8f71afc7a0",
+    "domain": "calendly.com",
+    "website_url": "https://calendly.com/",
+    "created_at": "2026-10-14T17:20:27.690855+00:00",
+    "updated_at": "2026-10-14T17:20:59.629371+00:00",
+    "campaign_generation": {
+      "error": "Claude returned incomplete or invalid campaigns. Your saved campaigns are unchanged. Use Regenerate to make another request.",
+      "model": "anthropic/claude-haiku-4.5",
+      "job_id": "4a963ebe-5c86-4f13-baee-80f40e98da60",
+      "status": "failed",
+      "attempts": 1,
+      "request_id": "f7b34b4d-58db-424b-8616-38c69ff3b441",
+      "started_at": "2026-10-14T17:23:11.292197+00:00",
+      "finished_at": "2026-10-14T17:23:28.470223+00:00",
+      "auto_attempted": true
+    }
+  },
+  "job": {
+    "id": "4a963ebe-5c86-4f13-baee-80f40e98da60",
+    "project_id": "2ec337ca-9170-4582-9496-1e8f71afc7a0",
+    "status": "completed",
+    "provider_job_id": "01a13b6e-1d50-767a-b073-9246531c5b44",
+    "selected_urls": [
+      "https://calendly.com/",
+      "https://calendly.com/miecat",
+      "https://calendly.com/gutbabe",
+      "https://calendly.com/compliance",
+      "https://calendly.com/slct/45min",
+      "https://calendly.com/integration",
+      "https://calendly.com/tracysoracle",
+      "https://calendly.com/axisfinhealth",
+      "https://calendly.com/dan-bruck-6mu",
+      "https://calendly.com/dmurban/30min"
+    ],
+    "pages_completed": 8,
+    "error_code": null,
+    "error_message": null,
+    "created_at": "2026-10-14T17:20:27.690855+00:00",
+    "updated_at": "2026-10-14T17:20:59.629371+00:00",
+    "finished_at": "2026-10-14T17:20:59.629371+00:00"
+  },
+  "profile": {
+    "id": "88646357-27c2-47a1-bf58-8668fe1b5c86",
+    "project_id": "2ec337ca-9170-4582-9496-1e8f71afc7a0",
+    "job_id": "4a963ebe-5c86-4f13-baee-80f40e98da60",
+    "company_name": "Calendly",
+    "business_description": "Calendly is a scheduling tool designed to streamline the process of booking meetings and handling meeting tasks to enhance productivity.",
+    "descriptions": [
+      {
+        "text": "Calendly is a scheduling tool designed to streamline the process of booking meetings and handling meeting tasks to enhance productivity.",
+        "source_urls": [
+          "https://calendly.com/"
+        ]
+      },
+      {
+        "text": "The MIECAT Institute offers workshops for the Masters in Therapeutic Arts Practice.",
+        "source_urls": [
+          "https://calendly.com/miecat"
+        ]
+      },
+      {
+        "text": "Calendly is a platform that simplifies scheduling meetings and managing appointments, allowing users to book time seamlessly.",
+        "source_urls": [
+          "https://calendly.com/integration"
+        ]
+      },
+      {
+        "text": "An intuitive energy channeling and sound healing service.",
+        "source_urls": [
+          "https://calendly.com/tracysoracle"
+        ]
+      },
+      {
+        "text": "Provides scheduling services for Medicare and health insurance consultations, specializing in employee benefits for small to mid-size groups.",
+        "source_urls": [
+          "https://calendly.com/axisfinhealth"
+        ]
+      },
+      {
+        "text": "Scheduling services for introductory calls related to job candidate introductions.",
+        "source_urls": [
+          "https://calendly.com/dan-bruck-6mu"
+        ]
+      }
+    ],
+    "products": [
+      {
+        "name": "Calendly",
+        "description": "The #1 scheduling tool that gives complete control and customization for booking meetings.",
+        "source_urls": [
+          "https://calendly.com/",
+          "https://calendly.com/integration"
+        ]
+      },
+      {
+        "name": "Callie",
+        "description": "An AI scheduling assistant that helps coordinate scheduling without switching tools.",
+        "source_urls": [
+          "https://calendly.com/"
+        ]
+      },
+      {
+        "name": "Notetaker",
+        "description": "Provides actionable and shareable recaps for every meeting.",
+        "source_urls": [
+          "https://calendly.com/"
+        ]
+      },
+      {
+        "name": "Payment tools",
+        "description": "Flexible built-in payment tools that allow charging upfront for meetings, selling packages, and sending invoices.",
+        "source_urls": [
+          "https://calendly.com/"
+        ]
+      },
+      {
+        "name": "Masters in Therapeutic Arts Practice",
+        "description": "Start your application to the Masters in Therapeutic Arts Practice by booking a Selection & Admissions Workshop.",
+        "source_urls": [
+          "https://calendly.com/miecat"
+        ]
+      },
+      {
+        "name": "Intuitive Energy Channeling + Sound Healing Session",
+        "description": "A deep‑dive intuitive experience for realignment, clarity, and energetic renewal.",
+        "source_urls": [
+          "https://calendly.com/tracysoracle"
+        ]
+      },
+      {
+        "name": "30 Minute Medicare Review",
+        "description": "A 30 min time slot for reviewing the basics of Medicare.",
+        "source_urls": [
+          "https://calendly.com/axisfinhealth"
+        ]
+      },
+      {
+        "name": "Health Ins Review - Up to 45 Min Meeting",
+        "description": "We offer various health insurance solutions, checking eligibility for tax credits.",
+        "source_urls": [
+          "https://calendly.com/axisfinhealth"
+        ]
+      },
+      {
+        "name": "New to Medicare Review - 60 Minute Phone Call",
+        "description": "A 60 min time slot for new Medicare users.",
+        "source_urls": [
+          "https://calendly.com/axisfinhealth"
+        ]
+      },
+      {
+        "name": "Health Ins Open Enrollment - up to 30 Min",
+        "description": "Review of health insurance solutions during open enrollment periods.",
+        "source_urls": [
+          "https://calendly.com/axisfinhealth"
+        ]
+      },
+      {
+        "name": "Group Health / Employee Benefits",
+        "description": "Specializes in employee benefit packages for small to mid-size groups.",
+        "source_urls": [
+          "https://calendly.com/axisfinhealth"
+        ]
+      },
+      {
+        "name": "Tohi - Group Health / Employee Benefits Consultation",
+        "description": "Consultation for small to mid-size businesses on employee benefit packages.",
+        "source_urls": [
+          "https://calendly.com/axisfinhealth"
+        ]
+      }
+    ],
+    "customers": [
+      {
+        "name": "RBL Media",
+        "description": "Founded by Pua Pakele; reported $1,200 annual savings using Calendly.",
+        "source_urls": [
+          "https://calendly.com/"
+        ]
+      },
+      {
+        "name": "Real Life E",
+        "description": "Founded by Elizabeth Saunders; achieved 100% attendance rate by adding a booking fee.",
+        "source_urls": [
+          "https://calendly.com/"
+        ]
+      },
+      {
+        "name": "Achievement First",
+        "description": "Managed by Marques Stewart; saved 75 hours monthly through Calendly.",
+        "source_urls": [
+          "https://calendly.com/"
+        ]
+      },
+      {
+        "name": "Barking with the Bradley’s",
+        "description": "Co-founded by Akira Bradley; achieved an 80% reduction in booking-related emails.",
+        "source_urls": [
+          "https://calendly.com/"
+        ]
+      },
+      {
+        "name": "Kitty of Angels",
+        "description": "Founded by Lizzie Lewis; saved 3 to 5 hours per week with Notetaker.",
+        "source_urls": [
+          "https://calendly.com/"
+        ]
+      },
+      {
+        "name": "small to mid-size groups",
+        "description": "Companies looking for employee benefit packages.",
+        "source_urls": [
+          "https://calendly.com/axisfinhealth"
+        ]
+      },
+      {
+        "name": "new Medicare users",
+        "description": "Individuals who are newly eligible for Medicare.",
+        "source_urls": [
+          "https://calendly.com/axisfinhealth"
+        ]
+      }
+    ],
+    "locations": [
+      {
+        "name": "MIECAT Institute",
+        "description": "374 George Street, Fitzroy/Ngár-go Vic 3065, Australia",
+        "source_urls": [
+          "https://calendly.com/miecat"
+        ]
+      },
+      {
+        "name": "Axis Financial Office",
+        "description": "Specific business location not explicitly stated.",
+        "source_urls": [
+          "https://calendly.com/axisfinhealth"
+        ]
+      }
+    ],
+    "source_urls": [
+      "https://calendly.com/",
+      "https://calendly.com/miecat",
+      "https://calendly.com/integration",
+      "https://calendly.com/tracysoracle",
+      "https://calendly.com/axisfinhealth",
+      "https://calendly.com/dan-bruck-6mu"
+    ],
+    "warnings": [
+      "Usable facts were found on 6 of 10 selected pages. Other pages were unavailable or contained no company facts."
+    ],
+    "created_at": "2026-10-14T17:20:59.629371+00:00",
+    "competitor_research": {
+      "error": null,
+      "status": "completed",
+      "queries": [
+        "scheduling give complete control customization booking meeting platforms -inurl:blog -inurl:alternatives -inurl:learn -site:quora.com -site:reddit.com",
+        "scheduling give complete control rbl media founded pua pakele providers -inurl:blog -inurl:alternatives -inurl:learn -site:quora.com -site:reddit.com",
+        "\"Calendly\" alternatives"
+      ],
+      "results": [
+        {
+          "name": "Sprintful",
+          "domain": "calendly-alternatives.org",
+          "pricing": [
+            {
+              "name": "Basic",
+              "description": "Basic $9 / user / month",
+              "source_urls": [
+                "https://calendly-alternatives.org/"
+              ],
+              "evidence_quote": "Basic $9 / user / month"
+            },
+            {
+              "name": "Professional",
+              "description": "Professional $19 / user / month",
+              "source_urls": [
+                "https://calendly-alternatives.org/"
+              ],
+              "evidence_quote": "Professional $19 / user / month"
+            },
+            {
+              "name": "Business",
+              "description": "Business $49 / user / month",
+              "source_urls": [
+                "https://calendly-alternatives.org/"
+              ],
+              "evidence_quote": "Business $49 / user / month"
+            },
+            {
+              "name": "Enterprise",
+              "description": "Enterprise: contact sales",
+              "source_urls": [
+                "https://calendly-alternatives.org/"
+              ],
+              "evidence_quote": "Enterprise: contact sales"
+            }
+          ],
+          "features": [
+            {
+              "name": "Custom domain",
+              "description": "Custom domain included, with full SSL handled for you.",
+              "source_urls": [
+                "https://calendly-alternatives.org/"
+              ],
+              "evidence_quote": "Custom domain included, with full SSL handled for you."
+            },
+            {
+              "name": "Branded email sender",
+              "description": "Branded email sender (notifications from _@your-company.com_).",
+              "source_urls": [
+                "https://calendly-alternatives.org/"
+              ],
+              "evidence_quote": "Branded email sender (notifications from _@your-company.com_)."
+            },
+            {
+              "name": "Custom CSS / HTML",
+              "description": "Custom CSS / HTML on booking pages.",
+              "source_urls": [
+                "https://calendly-alternatives.org/"
+              ],
+              "evidence_quote": "Custom CSS / HTML on booking pages."
+            },
+            {
+              "name": "SMS notifications",
+              "description": "SMS notifications with your own caller-ID.",
+              "source_urls": [
+                "https://calendly-alternatives.org/"
+              ],
+              "evidence_quote": "SMS notifications with your own caller-ID."
+            },
+            {
+              "name": "Team admin",
+              "description": "Team admin: roles & permissions, centralized availability and branding, team-wide and resource-specific audit logs, account impersonation.",
+              "source_urls": [
+                "https://calendly-alternatives.org/"
+              ],
+              "evidence_quote": "Team admin: roles & permissions, centralized availability and branding, team-wide and resource-specific audit logs, account impersonation."
+            },
+            {
+              "name": "Enterprise security",
+              "description": "Enterprise security: SAML SSO, enforced 2FA, custom auth policies.",
+              "source_urls": [
+                "https://calendly-alternatives.org/"
+              ],
+              "evidence_quote": "Enterprise security: SAML SSO, enforced 2FA, custom auth policies."
+            },
+            {
+              "name": "Integrations",
+              "description": "Integrations: Google Calendar, Outlook, Microsoft Teams, Zoom, Zapier, and more.",
+              "source_urls": [
+                "https://calendly-alternatives.org/"
+              ],
+              "evidence_quote": "Integrations: Google Calendar, Outlook, Microsoft Teams, Zoom, Zapier, and more."
+            }
+          ],
+          "products": [],
+          "customers": [
+            {
+              "name": "Fortune 500 companies",
+              "description": "Customers include Fortune 500 companies, government entities, and universities.",
+              "source_urls": [
+                "https://calendly-alternatives.org/"
+              ],
+              "evidence_quote": "Customers include Fortune 500 companies, government entities, and universities."
+            },
+            {
+              "name": "Government entities",
+              "description": "Customers include Fortune 500 companies, government entities, and universities.",
+              "source_urls": [
+                "https://calendly-alternatives.org/"
+              ],
+              "evidence_quote": "Customers include Fortune 500 companies, government entities, and universities."
+            },
+            {
+              "name": "Universities",
+              "description": "Customers include Fortune 500 companies, government entities, and universities.",
+              "source_urls": [
+                "https://calendly-alternatives.org/"
+              ],
+              "evidence_quote": "Customers include Fortune 500 companies, government entities, and universities."
+            }
+          ],
+          "description": "The pitch is simple: your domain, your design, your email sender, your team controls.",
+          "source_urls": [
+            "https://calendly-alternatives.org/"
+          ],
+          "relationship": "related",
+          "ranking_reason": "Shared product terms: control, booking. Shared audience terms: companie.",
+          "relevance_score": 21
+        },
+        {
+          "name": "Zoom",
+          "domain": "zoom.com",
+          "pricing": [],
+          "features": [
+            {
+              "name": "My Notes",
+              "description": "My Notes",
+              "source_urls": [
+                "https://www.zoom.com/"
+              ],
+              "evidence_quote": "My Notes"
+            },
+            {
+              "name": "ZoomMate",
+              "description": "ZoomMate",
+              "source_urls": [
+                "https://www.zoom.com/"
+              ],
+              "evidence_quote": "ZoomMate"
+            },
+            {
+              "name": "AI Productivity Suite",
+              "description": "AI Productivity Suite",
+              "source_urls": [
+                "https://www.zoom.com/"
+              ],
+              "evidence_quote": "AI Productivity Suite"
+            }
+          ],
+          "products": [
+            {
+              "name": "Meetings",
+              "description": "Meetings",
+              "source_urls": [
+                "https://www.zoom.com/"
+              ],
+              "evidence_quote": "Meetings"
+            },
+            {
+              "name": "Webinars",
+              "description": "Webinars",
+              "source_urls": [
+                "https://www.zoom.com/"
+              ],
+              "evidence_quote": "Webinars"
+            },
+            {
+              "name": "Contact Center",
+              "description": "Contact Center",
+              "source_urls": [
+                "https://www.zoom.com/"
+              ],
+              "evidence_quote": "Contact Center"
+            },
+            {
+              "name": "Virtual Agent",
+              "description": "Virtual Agent",
+              "source_urls": [
+                "https://www.zoom.com/"
+              ],
+              "evidence_quote": "Virtual Agent"
+            },
+            {
+              "name": "workvivo",
+              "description": "workvivo",
+              "source_urls": [
+                "https://www.zoom.com/"
+              ],
+              "evidence_quote": "workvivo"
+            }
+          ],
+          "customers": [],
+          "description": "Bridge the gap between talking and doing with the AI-first work platform built for you.",
+          "source_urls": [
+            "https://www.zoom.com/"
+          ],
+          "relationship": "related",
+          "ranking_reason": "Shared product terms: meeting, built, productivity. No shared audience confirmed.",
+          "relevance_score": 16
+        },
+        {
+          "name": "Timetics",
+          "domain": "timetics.ai",
+          "pricing": [],
+          "features": [
+            {
+              "name": "Sales-driven booking pages",
+              "description": "Sales-driven booking pages for Individuals",
+              "source_urls": [
+                "https://timetics.ai/"
+              ],
+              "evidence_quote": "Sales-driven booking pages for Individuals"
+            },
+            {
+              "name": "Workspaces",
+              "description": "Workspaces",
+              "source_urls": [
+                "https://timetics.ai/"
+              ],
+              "evidence_quote": "Workspaces"
+            }
+          ],
+          "products": [
+            {
+              "name": "Timetics AI Agent",
+              "description": "Timetics AI Agent",
+              "source_urls": [
+                "https://timetics.ai/"
+              ],
+              "evidence_quote": "Timetics AI Agent"
+            },
+            {
+              "name": "Booking Page Builder",
+              "description": "Booking Page Builder",
+              "source_urls": [
+                "https://timetics.ai/"
+              ],
+              "evidence_quote": "Booking Page Builder"
+            },
+            {
+              "name": "Service-Based Scheduling",
+              "description": "Service-Based Scheduling",
+              "source_urls": [
+                "https://timetics.ai/"
+              ],
+              "evidence_quote": "Service-Based Scheduling"
+            },
+            {
+              "name": "Team Scheduling",
+              "description": "Team Scheduling",
+              "source_urls": [
+                "https://timetics.ai/"
+              ],
+              "evidence_quote": "Team Scheduling"
+            },
+            {
+              "name": "Workflows & Automation",
+              "description": "Workflows & Automation",
+              "source_urls": [
+                "https://timetics.ai/"
+              ],
+              "evidence_quote": "Workflows & Automation"
+            }
+          ],
+          "customers": [],
+          "description": "Timetics manages your income.",
+          "source_urls": [
+            "https://timetics.ai/"
+          ],
+          "relationship": "related",
+          "ranking_reason": "Shared product terms: scheduling, booking. No shared audience confirmed.",
+          "relevance_score": 11
+        },
+        {
+          "name": "YouCanBookMe",
+          "domain": "youcanbook.me",
+          "pricing": [
+            {
+              "name": "Free",
+              "description": "Get started. The most customizable free online scheduling tool you can get. Anywhere.",
+              "source_urls": [
+                "https://youcanbook.me/"
+              ],
+              "evidence_quote": "Get started. The most customizable free online scheduling tool you can get. Anywhere."
+            }
+          ],
+          "features": [],
+          "products": [],
+          "customers": [],
+          "description": "Proven to save you time, get more clients and make you money.",
+          "source_urls": [
+            "https://youcanbook.me/"
+          ],
+          "relationship": "related",
+          "ranking_reason": "Shared product terms: time. No shared audience confirmed.",
+          "relevance_score": 5
+        }
+      ],
+      "version": 14,
+      "working": false,
+      "warnings": [
+        "Some candidates lacked readable, relevant first-party evidence and were omitted."
+      ],
+      "candidates": [
+        {
+          "url": "https://www.gartner.com/",
+          "domain": "gartner.com",
+          "relevance": 22,
+          "discovery_urls": [
+            "https://www.gartner.com/reviews/market/scheduling-automation-software"
+          ]
+        },
+        {
+          "url": "https://hk-calendly--grownbrilliance.glopalstore.com/",
+          "domain": "glopalstore.com",
+          "relevance": 17,
+          "discovery_urls": [
+            "https://hk-calendly--grownbrilliance.glopalstore.com/customers/rbl-media",
+            "https://qa-calendly--grownbrilliance.glopalstore.com/customers/rbl-media"
+          ]
+        },
+        {
+          "url": "https://calendly-alternatives.org/",
+          "domain": "calendly-alternatives.org",
+          "relevance": 14,
+          "discovery_urls": [
+            "https://calendly-alternatives.org/"
+          ]
+        },
+        {
+          "url": "https://easypractice.net/",
+          "domain": "easypractice.net",
+          "relevance": 13,
+          "discovery_urls": [
+            "https://easypractice.net/meeting-scheduler/"
+          ]
+        },
+        {
+          "url": "https://timetics.ai/",
+          "domain": "timetics.ai",
+          "relevance": 13,
+          "discovery_urls": [
+            "https://timetics.ai/best-booking-software-for-service-businesses/"
+          ]
+        },
+        {
+          "url": "https://youcanbook.me/",
+          "domain": "youcanbook.me",
+          "relevance": 13,
+          "discovery_urls": [
+            "https://youcanbook.me/"
+          ]
+        },
+        {
+          "url": "https://www.zoom.com/",
+          "domain": "zoom.com",
+          "relevance": 8,
+          "discovery_urls": [
+            "https://www.zoom.com/en/products/appointment-scheduler/"
+          ]
+        },
+        {
+          "url": "https://podcast.lifterlms.com/",
+          "domain": "lifterlms.com",
+          "relevance": 7,
+          "discovery_urls": [
+            "https://podcast.lifterlms.com/start-online-coaching-course-business-2023-pua-pakele/"
+          ]
+        }
+      ],
+      "error_code": null,
+      "updated_at": "2026-10-14T17:22:59.445864+00:00",
+      "searches_used": 3,
+      "batch_attempted": true,
+      "pages_completed": 8,
+      "provider_job_id": "01a13b6f-c965-7529-af18-f703de6501bb",
+      "search_successes": 3
+    },
+    "campaign_plan": {
+      "status": "completed",
+      "version": 1,
+      "warnings": [],
+      "campaigns": [],
+      "created_at": "2026-10-14T17:23:10.869358+00:00",
+      "updated_at": "2026-10-14T17:23:10.869358+00:00",
+      "selected_ids": []
+    },
+    "company_discovery": {},
+    "people_discovery": {}
+  },
+  "events": [
+    {
+      "id": 28,
+      "job_id": "4a963ebe-5c86-4f13-baee-80f40e98da60",
+      "project_id": "2ec337ca-9170-4582-9496-1e8f71afc7a0",
+      "status": "mapping",
+      "message": "Finding company pages",
+      "pages_completed": 0,
+      "created_at": "2026-10-14T17:20:27.690855+00:00"
+    },
+    {
+      "id": 29,
+      "job_id": "4a963ebe-5c86-4f13-baee-80f40e98da60",
+      "project_id": "2ec337ca-9170-4582-9496-1e8f71afc7a0",
+      "status": "scraping",
+      "message": "Researching company pages",
+      "pages_completed": 0,
+      "created_at": "2026-10-14T17:20:35.121433+00:00"
+    },
+    {
+      "id": 30,
+      "job_id": "4a963ebe-5c86-4f13-baee-80f40e98da60",
+      "project_id": "2ec337ca-9170-4582-9496-1e8f71afc7a0",
+      "status": "scraping",
+      "message": "Researching company pages",
+      "pages_completed": 6,
+      "created_at": "2026-10-14T17:20:45.579814+00:00"
+    },
+    {
+      "id": 31,
+      "job_id": "4a963ebe-5c86-4f13-baee-80f40e98da60",
+      "project_id": "2ec337ca-9170-4582-9496-1e8f71afc7a0",
+      "status": "scraping",
+      "message": "Researching company pages",
+      "pages_completed": 8,
+      "created_at": "2026-10-14T17:20:53.432168+00:00"
+    },
+    {
+      "id": 32,
+      "job_id": "4a963ebe-5c86-4f13-baee-80f40e98da60",
+      "project_id": "2ec337ca-9170-4582-9496-1e8f71afc7a0",
+      "status": "completed",
+      "message": "Company profile saved",
+      "pages_completed": 8,
+      "created_at": "2026-10-14T17:20:59.629371+00:00"
+    }
+  ],
+  "events_truncated": false
+}
