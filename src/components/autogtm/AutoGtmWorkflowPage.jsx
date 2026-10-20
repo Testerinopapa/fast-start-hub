@@ -111,12 +111,8 @@ export default function AutoGtmWorkflowPage({ domain = 'keethub.lovable.app' }) 
     const timer = setTimeout(() => setDiscoveryAnimationReady(true), 4400);
     return () => clearTimeout(timer);
   }, [discoveryEnabled, discoveryCampaignId]);
-  const [campaignAnimationReady, setCampaignAnimationReady] = useState(false);
-  useEffect(() => {
-    if (!campaignsEnabled) { setCampaignAnimationReady(false); return; }
-    const timer = setTimeout(() => setCampaignAnimationReady(true), 4600);
-    return () => clearTimeout(timer);
-  }, [campaignsEnabled]);
+  // Rule-based suggestions finish locally; do not impose the old 4.6-second model-loading animation.
+  const campaignAnimationReady = true;
   const [competitorAnimationReady, setCompetitorAnimationReady] = useState(false);
   useEffect(() => {
     if (!competitorEnabled) { setCompetitorAnimationReady(false); return; }
@@ -188,7 +184,7 @@ export default function AutoGtmWorkflowPage({ domain = 'keethub.lovable.app' }) 
 
   useEffect(() => {
     // A later-phase URL must enter Phase 3, not merely render it, when the
-    // saved plan has no usable campaigns. Entering it enables AI generation.
+    // saved plan has no usable campaigns. Entering it enables local rule-based generation.
     if (campaignsEnabled && campaignsReady && !campaignError && !campaignPlan.campaigns.length &&
         PHASES.indexOf(selectedPhase) > 5) {
       changePhase('research_segments_loading');
