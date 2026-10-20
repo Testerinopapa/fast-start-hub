@@ -1,3 +1,5 @@
+> **Obsolete:** Phase 3 no longer calls OpenRouter or Claude. See [Campaign Engine v1](campaign-engine-rules-v1.md) for the current credit-free implementation. This document is retained only for historical migration details.
+
 > Provider migration: the provider setup and deployment instructions below are historical. See [Context.dev migration](context-dev-migration.md) for the current implementation.
 
 # Phase 3: Claude campaign generation
