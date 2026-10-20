@@ -22,7 +22,7 @@ export default function Step3CampaignsGrid({
         <span className="text-xs text-gray-500">{busy ? 'Saving…' : `${selectedIds?.length || 0} selected · Review suggested targets`}</span>
         <div className="flex flex-wrap gap-2">
         {onRegenerate && <button type="button" disabled={busy} onClick={onRegenerate}
-          title="Replaces untouched suggestions; keeps custom and edited campaigns. Uses one model request."
+          title="Replaces untouched suggestions; keeps custom and edited campaigns. Generated locally with no AI credits or model calls."
           className="text-xs px-3 py-1.5 rounded-lg border border-black/10 bg-white text-gray-600 shadow-2xs">Regenerate suggestions</button>}
         <button type="button" disabled={busy || displaySegments.length >= 12} onClick={onCreate}
           className="text-xs px-3 py-1.5 rounded-lg border border-black/10 bg-white text-gray-600 shadow-2xs">New campaign</button>
