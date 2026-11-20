@@ -2,11 +2,17 @@ name: Explee OpenOutFind Lead QA
 
 on:
   push:
-    branches: [main, 'feat/openoutfind-*']
+    branches: [main, 'feat/openoutfind-*', 'test/lovable-openoutfind-*']
     paths:
       - '.github/workflows/explee-openoutfind.yml'
       - 'scripts/explee_openoutfind_bridge.py'
       - 'scripts/test_explee_openoutfind_bridge.py'
+      - 'scripts/check_lovable_proxy.py'
+      - 'scripts/test_check_lovable_proxy.py'
+      - 'scripts/run_openoutfind.py'
+      - 'supabase/functions/openoutfind-ai/**'
+      - 'supabase/functions/_shared/openoutfind-ai.ts'
+      - 'supabase/config.toml'
       - 'scripts/fixtures/openoutfind-*'
       - 'docs/explee-openoutfind.md'
   pull_request:
@@ -14,10 +20,21 @@ on:
       - '.github/workflows/explee-openoutfind.yml'
       - 'scripts/explee_openoutfind_bridge.py'
       - 'scripts/test_explee_openoutfind_bridge.py'
+      - 'scripts/check_lovable_proxy.py'
+      - 'scripts/test_check_lovable_proxy.py'
+      - 'scripts/run_openoutfind.py'
+      - 'supabase/functions/openoutfind-ai/**'
+      - 'supabase/functions/_shared/openoutfind-ai.ts'
+      - 'supabase/config.toml'
       - 'scripts/fixtures/openoutfind-*'
       - 'docs/explee-openoutfind.md'
   workflow_dispatch:
     inputs:
+      check_proxy:
+        description: 'Validate Lovable AI proxy authentication with GET /models (no AI credits)'
+        type: boolean
+        required: true
+        default: true
       run_live:
         description: 'Explicitly run OpenOutFind with paid LLM qualification (NO email purchases)'
         type: boolean
@@ -66,7 +83,10 @@ jobs:
           python-version: '3.12'
 
       - name: Run parser and safety contract tests
-        run: python -m unittest discover -s scripts -p 'test_explee_openoutfind_bridge.py' -v
+        run: |
+          python -m unittest discover -s scripts -p 'test_explee_openoutfind_bridge.py' -v
+          python -m unittest discover -s scripts -p 'test_check_lovable_proxy.py' -v
+          python -m py_compile scripts/run_openoutfind.py
 
       - name: Render example using synthetic fixtures only
         run: |
@@ -88,7 +108,7 @@ jobs:
   live:
     name: Optional OpenOutFind live lead qualification — no email lookup
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_live == true }}
-    needs: adapter-tests
+    needs: [adapter-tests, proxy-preflight]
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -97,7 +117,9 @@ jobs:
     env:
       OPENOUTFIND_LLM_API_KEY: ${{ secrets.OPENOUTFIND_LLM_API_KEY }}
       OPENOUTFIND_BETTERCONTACT_API_KEY: ${{ secrets.OPENOUTFIND_BETTERCONTACT_API_KEY }}
-      OPENOUTFIND_AI_MODEL: ${{ vars.OPENOUTFIND_AI_MODEL || 'openai:gpt-4o-mini' }}
+      OPENOUTFIND_AI_MODEL: 'openai_compatible:openai/gpt-6-luna'
+      OPENOUTFIND_LLM_API_BASE: ${{ vars.OPENOUTFIND_LLM_API_BASE || 'https://cvpeezzkzsbosyuhmhmf.supabase.co/functions/v1/openoutfind-ai/v1' }}
+      EXPLEE_AI_RUN_ID: github-${{ github.run_id }}-${{ github.run_attempt }}
       OPENOUTFIND_MAX_PER_COMPANY: '2'
       # No operator identity/token: pinned upstream cannot register with the
       # maintainer's shared contacts store or contribute candidate records.
@@ -157,10 +179,9 @@ jobs:
           export OPENOUTFIND_CAMPAIGN_TARGET="$(cat "$RUNNER_TEMP/openoutfind/target.md")"
           mkdir -p artifacts
           set +e
-          uvx --python 3.12 \
-            --from 'git+https://github.com/eracle/OpenOutFind@352efd65a84e9106cd08504d2714cd7f5b7bce44' \
-            outfind --db "$RUNNER_TEMP/openoutfind-run.sqlite3" \
-            find "$INPUT_LEAD_COUNT" --json \
+          uv run --no-project --python 3.12 \
+            --with 'openoutfind @ git+https://github.com/eracle/OpenOutFind@352efd65a84e9106cd08504d2714cd7f5b7bce44' \
+            python scripts/run_openoutfind.py "$INPUT_LEAD_COUNT" \
             > "$RUNNER_TEMP/openoutfind-results.jsonl" \
             2> "$RUNNER_TEMP/openoutfind-stderr.json"
           result=$?
@@ -230,3 +251,29 @@ jobs:
             echo "::error::OpenOutFind did not finish successfully; no verified-lead claim is made."
             exit 1
           fi
+
+
+  proxy-preflight:
+    name: Lovable AI proxy no-credit connection check
+    if: ${{ (github.event_name == 'workflow_dispatch' && (inputs.check_proxy == true || inputs.run_live == true)) || (github.event_name == 'push' && github.ref == 'refs/heads/test/lovable-openoutfind-live-20261120' && github.event.head_commit.message == 'verify_lovable_proxy_connection_20261120') }}
+    needs: adapter-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      OPENOUTFIND_LLM_API_KEY: ${{ secrets.OPENOUTFIND_LLM_API_KEY }}
+      OPENOUTFIND_LLM_API_BASE: ${{ vars.OPENOUTFIND_LLM_API_BASE || 'https://cvpeezzkzsbosyuhmhmf.supabase.co/functions/v1/openoutfind-ai/v1' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Verify deployed proxy with authenticated GET models
+        run: python scripts/check_lovable_proxy.py
+
+      - name: Summarize
+        if: success()
+        run: |
+          echo 'Lovable AI proxy authentication and model discovery succeeded without an inference request.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'This does NOT verify AI generation, quota database migration or lead-discovery quality.' >> "$GITHUB_STEP_SUMMARY"
