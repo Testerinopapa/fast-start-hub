@@ -1,0 +1,207 @@
+name: Explee Splee Six-Stage QA
+
+on:
+  push:
+    branches: [main, 'feat/splee-*']
+    paths:
+      - '.github/workflows/explee-splee-qa.yml'
+      - 'scripts/splee_pipeline_qa.py'
+      - 'scripts/splee_source_contract.py'
+      - 'scripts/test_splee_pipeline_qa.py'
+      - 'scripts/fixtures/splee-qa-synthetic.json'
+      - 'docs/explee-splee-integration.md'
+  pull_request:
+    paths:
+      - '.github/workflows/explee-splee-qa.yml'
+      - 'scripts/splee_pipeline_qa.py'
+      - 'scripts/splee_source_contract.py'
+      - 'scripts/test_splee_pipeline_qa.py'
+      - 'scripts/fixtures/splee-qa-synthetic.json'
+      - 'docs/explee-splee-integration.md'
+  workflow_dispatch:
+    inputs:
+      run_live:
+        description: 'Opt in to reading an existing Splee project; NEVER starts or sends campaigns'
+        type: boolean
+        required: true
+        default: false
+      splee_project_id:
+        description: 'UUID of the already-created Splee QA project (required for live)'
+        type: string
+        required: false
+        default: ''
+      expected_domain:
+        description: 'Expected public company domain for comparison'
+        type: string
+        required: true
+        default: 'calendly.com'
+      explee_source_run_id:
+        description: 'Optional Explee Pipeline QA run ID with a live research artifact'
+        type: string
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: explee-splee-qa-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  offline:
+    name: Pinned Splee source contract + synthetic quality QA
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      # Only read upstream source at an immutable commit. AGPL Splee remains an
+      # independent program; no upstream code is bundled into this repository.
+      - uses: actions/checkout@v4
+        with:
+          repository: Iweisc/splee
+          ref: 3c2b1723bc9651a2cd2872ae6a3b4939501c8435
+          path: splee-upstream
+          sparse-checkout: |
+            LICENSE
+            backend/src/routes/api_v1.rs
+            backend/src/routes/competitors.rs
+            backend/src/agent/explore.rs
+            backend/src/agent/prospect.rs
+            backend/src/agent/write.rs
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Verify read-only safety and quality contract
+        run: |
+          python -m unittest discover -s scripts -p 'test_splee_pipeline_qa.py' -v
+          python -m py_compile scripts/splee_pipeline_qa.py scripts/splee_source_contract.py
+
+      - name: Verify Splee's actual published code and license
+        run: |
+          python scripts/splee_source_contract.py \
+            --root splee-upstream \
+            --output artifacts/splee-source-contract.json
+
+      - name: Execute synthetic six-stage output-quality QA
+        run: |
+          python scripts/splee_pipeline_qa.py \
+            --output artifacts/splee-synthetic-qa.json fixture \
+            --input scripts/fixtures/splee-qa-synthetic.json
+
+      - name: Publish safe offline summary
+        if: always()
+        run: |
+          {
+            echo '## Splee six-stage integration QA'
+            echo ''
+            echo 'Source-only plus synthetic fixtures; these are NOT live leads or verified customers.'
+            echo 'Pinned Splee SHA: `3c2b1723bc9651a2cd2872ae6a3b4939501c8435`.'
+            echo 'No outreach, no writes, no Lovable development tools.'
+            echo ''
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ -f artifacts/splee-synthetic-qa.json ]; then
+            python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          p=json.load(open('artifacts/splee-synthetic-qa.json'))
+          for name, result in p['stages'].items():
+              print(f"- {name}: {result['state']} ({result['inspected']} synthetic records)")
+          print("- Actual lead/company/email quality is not verified by this offline run.")
+          PY
+          fi
+
+      - name: Upload aggregate source and fixture reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: explee-splee-offline-${{ github.run_id }}
+          path: |
+            artifacts/splee-source-contract.json
+            artifacts/splee-synthetic-qa.json
+          if-no-files-found: warn
+          retention-days: 14
+
+  live:
+    name: Optional read-only Splee existing-project quality comparison
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_live == true }}
+    needs: offline
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+    env:
+      SPLEE_BASE_URL: ${{ vars.SPLEE_BASE_URL }}
+      SPLEE_API_KEY: ${{ secrets.SPLEE_API_KEY }}
+      SPLEE_PROJECT_ID: ${{ inputs.splee_project_id }}
+      EXPECTED_DOMAIN: ${{ inputs.expected_domain }}
+      EXPLEE_SOURCE_RUN_ID: ${{ inputs.explee_source_run_id }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Validate read-only connection configuration
+        run: |
+          if [ -z "$SPLEE_BASE_URL" ] || [ -z "$SPLEE_API_KEY" ] || [ -z "$SPLEE_PROJECT_ID" ]; then
+            echo "::error::Set SPLEE_BASE_URL repository variable, SPLEE_API_KEY repository secret, and splee_project_id workflow input."
+            exit 1
+          fi
+          if [ -n "$EXPLEE_SOURCE_RUN_ID" ] && ! [[ "$EXPLEE_SOURCE_RUN_ID" =~ ^[0-9]{7,18}$ ]]; then
+            echo "::error::explee_source_run_id must be a numeric GitHub Actions run ID."
+            exit 1
+          fi
+
+      - name: Download optional saved Explee live research
+        if: ${{ inputs.explee_source_run_id != '' }}
+        uses: actions/download-artifact@v4
+        with:
+          run-id: ${{ inputs.explee_source_run_id }}
+          pattern: explee-live-qa-${{ inputs.explee_source_run_id }}-*
+          merge-multiple: true
+          path: source-report/
+          github-token: ${{ github.token }}
+
+      - name: Read Splee's six-stage output without side effects
+        run: |
+          python scripts/splee_pipeline_qa.py \
+            --output artifacts/splee-live-qa.json live \
+            --expected-domain "$EXPECTED_DOMAIN" \
+            --explee-report source-report/pipeline-live.json
+
+      - name: Summarize real observed coverage (no personal data)
+        if: always()
+        run: |
+          if [ ! -f artifacts/splee-live-qa.json ]; then
+            echo "No Splee report produced; check connection/status step." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          report=json.load(open('artifacts/splee-live-qa.json'))
+          print('## Splee read-only project audit')
+          print('No emails were sent or approved. Names, addresses, and email text were not saved.')
+          for stage, result in report["stages"].items():
+              print(f"- {stage}: {result['state']}; inspected={result['inspected']}; flags={sum(result['flags'].values())}")
+          print(f"- Splee vs Explee comparison available: {report['comparison']['available']}")
+          print('- Competitors cannot be audited through Splee API v1; full factual quality is not yet verified.')
+          PY
+
+      - name: Upload aggregate result only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: explee-splee-live-summary-${{ github.run_id }}
+          path: artifacts/splee-live-qa.json
+          if-no-files-found: warn
+          retention-days: 14
