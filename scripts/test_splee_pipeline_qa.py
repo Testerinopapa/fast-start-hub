@@ -184,7 +184,10 @@ class SpleeQAContractTests(unittest.TestCase):
         self.assertEqual(len(seen), 6)
         self.assertTrue(all(method == "GET" for method, _, _ in seen))
         self.assertTrue(all(header == "Bearer test_token" for _, _, header in seen))
-        self.assertEqual(result["research"], source["research"])
+        self.assertEqual(result["research"]["questions"], source["research"]["questions"])
+        self.assertEqual(result["research"]["items"], source["research"]["items"])
+        self.assertEqual(result["research"]["total"], source["research"]["total"])
+        self.assertFalse(result["research"]["truncated"])
 
 
 if __name__ == "__main__":
