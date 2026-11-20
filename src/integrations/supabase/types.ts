@@ -14,13 +14,61 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      openoutfind_ai_budget: {
+        Row: {
+          budget_day: string
+          id: boolean
+          paused: boolean
+          requests: number
+        }
+        Insert: {
+          budget_day?: string
+          id?: boolean
+          paused?: boolean
+          requests?: number
+        }
+        Update: {
+          budget_day?: string
+          id?: boolean
+          paused?: boolean
+          requests?: number
+        }
+        Relationships: []
+      }
+      openoutfind_ai_requests: {
+        Row: {
+          created_at: string
+          fingerprint: string
+          run_id: string
+          stopped: boolean
+        }
+        Insert: {
+          created_at?: string
+          fingerprint: string
+          run_id: string
+          stopped?: boolean
+        }
+        Update: {
+          created_at?: string
+          fingerprint?: string
+          run_id?: string
+          stopped?: boolean
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      openoutfind_ai_reserve: {
+        Args: { p_fingerprint: string; p_run_id: string }
+        Returns: string
+      }
+      openoutfind_ai_stop: {
+        Args: { p_pause_all: boolean; p_run_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

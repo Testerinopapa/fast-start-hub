@@ -15,4 +15,11 @@
 - Metadata-only search accepts provider caching; this endpoint has no top-level `maxAgeMs`. If adding inline Markdown later, consult the documented `markdownOptions.maxAgeMs` setting.
 - Retry only HTTP 408/429/5xx, at most twice, honoring Retry-After; long delays surface an error instead of retrying early. Never log raw SDK errors. Automated tests use mocked transport and must not call the paid API.
 - Manual paid smoke check (one request, retries disabled): `npx deno@2.9.6 run --config supabase/functions/deno.json --env-file=supabase/functions/.env.local --allow-env --allow-net=api.context.dev scripts/context-dev-smoke.ts`.
+ 
+## OpenOutFind AI
+
+- Keep qualification in the authenticated `openoutfind-ai` server function using the pinned Lovable AI SDK and generated contracts; this prevents exposing managed credentials to GitHub runners or browsers.
+- Enforce admission and duplicate protection through server-only database functions, not per-instance memory, because concurrent edge instances must share usage limits and stop states.
+- Keep OpenOutFind's pinned discovery package and no-email/no-shared-store workflow safeguards; only the LLM transport changes.
+- Use mocked transport for automatic regression tests; live provider checks remain an explicit manual workflow choice to prevent accidental spend.
 - Deployment and migration notes: `docs/context-dev-migration.md`. Company news and identity enrichment endpoints are not enabled; people discovery uses public-page search and evidence-based extraction.
