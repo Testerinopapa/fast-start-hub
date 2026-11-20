@@ -2,7 +2,7 @@ name: Explee OpenOutFind Lead QA
 
 on:
   push:
-    branches: [main, 'feat/openoutfind-*']
+    branches: [main, 'feat/openoutfind-*', 'ci/explee-lovable-live-once-20261120']
     paths:
       - '.github/workflows/explee-openoutfind.yml'
       - 'scripts/explee_openoutfind_bridge.py'
@@ -107,8 +107,8 @@ jobs:
 
   live:
     name: Optional OpenOutFind live lead qualification — no email lookup
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_live == true }}
-    needs: [adapter-tests, proxy-preflight]
+    if: ${{ (github.event_name == 'workflow_dispatch' && inputs.run_live == true) || (github.event_name == 'push' && github.ref == 'refs/heads/ci/explee-lovable-live-once-20261120' && github.event.head_commit.message == 'run_one_real_lovable_openoutfind_calendly_20261120') }}
+    needs: adapter-tests
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -139,7 +139,7 @@ jobs:
 
       - name: Verify manual source and credentials
         env:
-          SOURCE_RUN_ID: ${{ inputs.source_run_id }}
+          SOURCE_RUN_ID: ${{ inputs.source_run_id || '44815551658' }}
         run: |
           if ! [[ "$SOURCE_RUN_ID" =~ ^[0-9]+$ ]]; then
             echo "::error::Provide the run ID of a completed Explee Pipeline QA live smoke."
@@ -153,15 +153,15 @@ jobs:
       - name: Download saved Explee live research
         uses: actions/download-artifact@v4
         with:
-          run-id: ${{ inputs.source_run_id }}
-          pattern: explee-live-qa-${{ inputs.source_run_id }}-*
+          run-id: ${{ inputs.source_run_id || '44815551658' }}
+          pattern: explee-live-qa-${{ inputs.source_run_id || '44815551658' }}-*
           merge-multiple: true
           path: source-report/
           github-token: ${{ github.token }}
 
       - name: Build product brief and target from Explee campaign
         env:
-          INPUT_CAMPAIGN_INDEX: ${{ inputs.campaign_index }}
+          INPUT_CAMPAIGN_INDEX: ${{ inputs.campaign_index || '0' }}
         run: |
           python scripts/explee_openoutfind_bridge.py prepare \
             --source source-report/pipeline-live.json \
@@ -172,7 +172,7 @@ jobs:
         id: finder
         continue-on-error: true
         env:
-          INPUT_LEAD_COUNT: ${{ inputs.lead_count }}
+          INPUT_LEAD_COUNT: ${{ inputs.lead_count || '3' }}
         run: |
           # Isolated DB; never pass "emails" or "--emails".
           export OPENOUTFIND_PRODUCT_DOCS="$(cat "$RUNNER_TEMP/openoutfind/product.md")"
@@ -187,6 +187,24 @@ jobs:
           result=$?
           echo "OpenOutFind exited with code $result; no personal records are logged."
           exit "$result"
+
+      - name: Summarize safe provider diagnostics
+        if: always()
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          s = (Path(os.environ["RUNNER_TEMP"]) / "openoutfind-stderr.json")
+          raw = s.read_text(encoding="utf-8", errors="replace").lower() if s.is_file() else ""
+          tokens = ["name or service not known", "temporary failure in name resolution", "getaddrinfo", "connection refused", "connection reset",
+                    "certificate verify failed", "connecterror", "dns", "timeout", "401 unauthorized", "403 forbidden",
+                    "404 not found", "429", "402 payment", "no model to write with", "no finder",
+                    "unable to connect", "llm_api_base", "bettercontact", "requesterror", "valueerror",
+                    "missing", "traceback"]
+          found = [k for k in tokens if k in raw]
+          print("Provider error indicators (not raw logs):", ", ".join(found) if found else "none")
+          print("Provider stderr bytes:", len(raw.encode("utf-8")))
+          PY
 
       - name: Normalize candidate leads and write aggregate summary
         if: always()
