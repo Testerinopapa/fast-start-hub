@@ -58,7 +58,7 @@ class QABudget:
 
     def run_agent(self, runner, coro):
         frame = inspect.currentframe()
-        caller = frame.f_back if frame else None
+        caller = frame.f_back.f_back if frame and frame.f_back else None
         phase = _PHASES.get(caller.f_globals.get("__name__", ""), "other") if caller else "other"
         with self._lock:
             previous = self.phase
