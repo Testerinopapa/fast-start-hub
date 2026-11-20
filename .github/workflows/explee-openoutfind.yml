@@ -109,6 +109,29 @@ jobs:
             --leads scripts/fixtures/openoutfind-leads.jsonl \
             --metadata artifacts/example/campaign.json --output artifacts/example
 
+      - name: Smoke-test CLI QA reporting on synthetic partial results
+        run: |
+          mkdir -p artifacts/qa-smoke
+          echo 1 > artifacts/qa-smoke/exit-code.txt
+          echo '{"schema_version":"explee.openoutfind.qa-metrics.v1","max_ai_requests":8,"ai_requests_sent":8,"requests_blocked_locally":1,"local_ai_cap_hit":true,"requests_by_phase":{"lead_qualification":8}}' > artifacts/qa-smoke/metrics.json
+          echo '{"error":{"type":"goal_unreached","message":"synthetic provider details never included in report"}}' > artifacts/qa-smoke/stderr.jsonl
+          python scripts/explee_qa_report.py \
+            --summary artifacts/example/openoutfind-summary.json \
+            --metrics artifacts/qa-smoke/metrics.json \
+            --stderr artifacts/qa-smoke/stderr.jsonl \
+            --exit-code-file artifacts/qa-smoke/exit-code.txt \
+            --requested 3 \
+            --output artifacts/qa-smoke/qa.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          result = json.loads(Path("artifacts/qa-smoke/qa.json").read_text())
+          assert result["result"] == "partial"
+          assert result["reason"] == "local_ai_budget"
+          assert result["ai_requests_sent"] == 8
+          assert "synthetic provider details" not in json.dumps(result)
+          PY
+
       - name: Upload synthetic offline adapter example
         uses: actions/upload-artifact@v4
         with:
@@ -197,7 +220,7 @@ jobs:
             > "$RUNNER_TEMP/openoutfind-results.jsonl" \
             2> "$RUNNER_TEMP/openoutfind-stderr.json"
           result=$?
-          printf "%s\\n" "$result" > "$RUNNER_TEMP/openoutfind-exit-code.txt"
+          echo "$result" > "$RUNNER_TEMP/openoutfind-exit-code.txt"
           echo "OpenOutFind exited with code $result; no personal records are logged."
           exit "$result"
 
