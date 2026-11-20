@@ -8,6 +8,7 @@ names, contact data, subject lines, message text, or credentials enter reports.
 from __future__ import annotations
 
 import argparse
+import ipaddress
 import json
 import os
 import re
@@ -233,9 +234,15 @@ class NoRedirects(HTTPRedirectHandler):
 def valid_base_url(value):
     try:
         parsed = urlsplit(value)
-        if (parsed.scheme != "https" or not parsed.hostname or not DOMAIN.fullmatch(parsed.hostname)
+        if (parsed.scheme != "https" or not parsed.hostname or "." not in parsed.hostname or not DOMAIN.fullmatch(parsed.hostname)
                 or parsed.username or parsed.password or parsed.port or parsed.query or parsed.fragment
                 or parsed.path not in ("", "/")):
+            raise ValueError("invalid_splee_base_url")
+        try:
+            ipaddress.ip_address(parsed.hostname)
+        except ValueError:
+            pass
+        else:
             raise ValueError("invalid_splee_base_url")
         return "https://" + parsed.hostname
     except (ValueError, AttributeError):
