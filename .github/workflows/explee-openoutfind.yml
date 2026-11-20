@@ -118,7 +118,7 @@ jobs:
       OPENOUTFIND_LLM_API_KEY: ${{ secrets.OPENOUTFIND_LLM_API_KEY }}
       OPENOUTFIND_BETTERCONTACT_API_KEY: ${{ secrets.OPENOUTFIND_BETTERCONTACT_API_KEY }}
       OPENOUTFIND_AI_MODEL: 'openai_compatible:openai/gpt-6-luna'
-      OPENOUTFIND_LLM_API_BASE: ${{ vars.OPENOUTFIND_LLM_API_BASE || 'https://cvpeezzkzsbosyuhmhmf.supabase.co/functions/v1/openoutfind-ai/v1' }}
+      OPENOUTFIND_LLM_API_BASE: ${{ vars.OPENOUTFIND_LLM_API_BASE || 'https://emlggkmtbosahpzrxaul.supabase.co/functions/v1/openoutfind-ai/v1' }}
       EXPLEE_AI_RUN_ID: github-${{ github.run_id }}-${{ github.run_attempt }}
       OPENOUTFIND_MAX_PER_COMPANY: '2'
       # No operator identity/token: pinned upstream cannot register with the
@@ -308,7 +308,7 @@ jobs:
     timeout-minutes: 5
     env:
       OPENOUTFIND_LLM_API_KEY: ${{ secrets.OPENOUTFIND_LLM_API_KEY }}
-      OPENOUTFIND_LLM_API_BASE: ${{ vars.OPENOUTFIND_LLM_API_BASE || 'https://cvpeezzkzsbosyuhmhmf.supabase.co/functions/v1/openoutfind-ai/v1' }}
+      OPENOUTFIND_LLM_API_BASE: ${{ vars.OPENOUTFIND_LLM_API_BASE || 'https://emlggkmtbosahpzrxaul.supabase.co/functions/v1/openoutfind-ai/v1' }}
     steps:
       - uses: actions/checkout@v4
 

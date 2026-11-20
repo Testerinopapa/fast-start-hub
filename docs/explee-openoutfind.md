@@ -20,7 +20,7 @@ These are **provider profile matches and an LLM-generated qualification hypothes
 | OPENOUTFIND_LLM_API_KEY | Shared proxy token: must match server-side `OPENOUTFIND_PROXY_TOKEN` in Lovable Cloud; **not an OpenAI API key** |
 | OPENOUTFIND_BETTERCONTACT_API_KEY | BetterContact Lead Finder discovery (no work-email purchase in our workflow) |
 
-Optional Actions **repository variable** `OPENOUTFIND_LLM_API_BASE` for the deployed Lovable AI proxy URL. The default currently points to `https://cvpeezzkzsbosyuhmhmf.supabase.co/functions/v1/openoutfind-ai/v1`; override it if Lovable hosts the function elsewhere. The model is fixed to `openai_compatible:openai/gpt-6-luna` to match the proxy schema; the older `OPENOUTFIND_AI_MODEL` variable is ignored. The existing `CONTEXT_DEV_API_KEY` is for research. **Do not add keys to code, issues, logs or artifacts.**
+Optional Actions **repository variable** `OPENOUTFIND_LLM_API_BASE` for the deployed Lovable AI proxy URL. The default currently points to `https://emlggkmtbosahpzrxaul.supabase.co/functions/v1/openoutfind-ai/v1`; override it if Lovable hosts the function elsewhere. The model is fixed to `openai_compatible:openai/gpt-6-luna` to match the proxy schema; the older `OPENOUTFIND_AI_MODEL` variable is ignored. The existing `CONTEXT_DEV_API_KEY` is for research. **Do not add keys to code, issues, logs or artifacts.**
 
 **Expenses:** BetterContact index searches are described as free by upstream; Lovable AI inference consumes Lovable credits. We call **find N --json** and never use **emails** or **--emails**, so no paid email lookup is authorized. The 1/3/5-lead limit is **not a strict token budget**. GitHub Actions timeout bounds runtime, not provider spend.
 
