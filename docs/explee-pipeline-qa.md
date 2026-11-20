@@ -42,14 +42,14 @@ To test fresh company outputs:
 3. Tick **live_context_dev** and enter a public company URL (e.g. `https://calendly.com`).
 4. Run it. The live job writes `pipeline-live.json` and `pipeline-live.md`, available in its Summary/Artifacts.
 
-The live smoke does:
-- URL mapping and **up to 2** structured page scrapes → extract first-party company facts.
+The live smoke reuses the Phase 4 company search ranking and website verification functions. The prequalification filter skips guides and directories before spending the extra page request. It does not run the full Phase 5 contact extraction, which still requires verified employment evidence.\n\nThe live smoke does:
+- URL mapping and **up to 2** structured company scrapes → extract first-party company facts.
 - Local zero-credit campaign generation based on those facts.
-- Up to **3** search requests for competitor, potential buyer and person **previews**.
+- Up to **3** search requests for competitor, potential buyer and person **previews**, with **up to 1 extra buyer-company scrape** for evidence-based qualification. Person search is skipped unless the buyer's website identity and potential fit are supported.
 
 Search results are labeled **unverified**. This is not the full persistence-dependent discovery, qualification, or emailing pipeline. No emails are sent and no database writes occur. It does **not** access Supabase.
 
-**Cost warning:** The maximum is 1 URL mapping request, 2 structured scraping requests and 3 search requests. That is a *request cap*, not a guaranteed credit or dollar cap; structured extraction can consume more than one provider credit per request. Live mode runs only on explicit manual opt-in, never on pushes.
+**Cost warning:** The maximum is 1 URL mapping request, 3 structured scraping requests and 3 search requests. That is a *request cap*, not a guaranteed credit or dollar cap; structured extraction can consume more than one provider credit per request. Live mode runs only on explicit manual opt-in, never on pushes.
 
 ## Iteration loop
 
