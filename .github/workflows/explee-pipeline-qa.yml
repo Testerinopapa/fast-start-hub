@@ -171,7 +171,7 @@ jobs:
 
   live:
     name: Optional paid Context.dev smoke (no Supabase)
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.live_context_dev == true }}
+    if: ${{ (github.event_name == 'workflow_dispatch' && inputs.live_context_dev == true) || (github.event_name == 'push' && github.ref == 'refs/heads/ci/explee-live-calendly-once-20261120' && github.event.head_commit.message == 'ci: one-time paid Calendly smoke') }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
@@ -190,7 +190,7 @@ jobs:
         id: live_report
         continue-on-error: true
         env:
-          INPUT_COMPANY: ${{ inputs.company }}
+          INPUT_COMPANY: ${{ inputs.company || 'https://calendly.com' }}
         run: |
           mkdir -p artifacts
           deno run --allow-env=CONTEXT_DEV_API_KEY,EXPLEE_APPROVE_PAID_RUN,GITHUB_SHA --allow-net=api.context.dev --allow-write=artifacts scripts/explee-pipeline-live.ts "$INPUT_COMPANY"
