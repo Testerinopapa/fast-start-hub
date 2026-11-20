@@ -56,10 +56,9 @@ class QABudget:
             self.requests_sent += 1
             self.by_phase[self.phase] += 1
 
-    def run_agent(self, runner, coro):
-        frame = inspect.currentframe()
-        caller = frame.f_back.f_back if frame and frame.f_back else None
-        phase = _PHASES.get(caller.f_globals.get("__name__", ""), "other") if caller else "other"
+    def run_agent(self, runner, coro, phase="other"):
+        if phase not in set(_PHASES.values()):
+            phase = "other"
         with self._lock:
             previous = self.phase
             self.phase = phase
@@ -137,7 +136,14 @@ def main() -> None:
 
     from openoutfind.core import llm
     original_runner = llm.run_agent_sync
-    llm.run_agent_sync = lambda coro: budget.run_agent(original_runner, coro)
+
+    def phase_runner(coro):
+        frame = inspect.currentframe()
+        caller = frame.f_back if frame else None
+        phase = _PHASES.get(caller.f_globals.get("__name__", ""), "other") if caller else "other"
+        return budget.run_agent(original_runner, coro, phase)
+
+    llm.run_agent_sync = phase_runner
     llm._PROVIDER_BUILDERS["openai_compatible"] = (
         lambda model, api_key, api_base: build_proxy_model(model, api_key, api_base, budget)
     )
