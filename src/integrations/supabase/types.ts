@@ -14,6 +14,228 @@ export type Database = {
   }
   public: {
     Tables: {
+      lead_import_codes: {
+        Row: {
+          code_hash: string
+          created_at: string
+          expires_at: string
+          owner_id: string
+          used_at: string | null
+          used_run_id: string | null
+        }
+        Insert: {
+          code_hash: string
+          created_at?: string
+          expires_at: string
+          owner_id: string
+          used_at?: string | null
+          used_run_id?: string | null
+        }
+        Update: {
+          code_hash?: string
+          created_at?: string
+          expires_at?: string
+          owner_id?: string
+          used_at?: string | null
+          used_run_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_import_codes_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "lead_review_owners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_results: {
+        Row: {
+          campaign_name: string | null
+          checks: Json
+          company: string | null
+          company_website: string | null
+          evidence_url: string | null
+          first_seen_at: string
+          id: string
+          last_run_id: string
+          last_seen_at: string
+          lead_key: string
+          manual_notes: string | null
+          manual_score: number | null
+          needs_review: boolean
+          owner_id: string
+          person_name: string | null
+          professional_profile: string | null
+          qualification_reason: string | null
+          review_status: string
+          reviewed_at: string | null
+          source: string
+          title: string | null
+        }
+        Insert: {
+          campaign_name?: string | null
+          checks?: Json
+          company?: string | null
+          company_website?: string | null
+          evidence_url?: string | null
+          first_seen_at?: string
+          id?: string
+          last_run_id: string
+          last_seen_at?: string
+          lead_key: string
+          manual_notes?: string | null
+          manual_score?: number | null
+          needs_review?: boolean
+          owner_id: string
+          person_name?: string | null
+          professional_profile?: string | null
+          qualification_reason?: string | null
+          review_status?: string
+          reviewed_at?: string | null
+          source?: string
+          title?: string | null
+        }
+        Update: {
+          campaign_name?: string | null
+          checks?: Json
+          company?: string | null
+          company_website?: string | null
+          evidence_url?: string | null
+          first_seen_at?: string
+          id?: string
+          last_run_id?: string
+          last_seen_at?: string
+          lead_key?: string
+          manual_notes?: string | null
+          manual_score?: number | null
+          needs_review?: boolean
+          owner_id?: string
+          person_name?: string | null
+          professional_profile?: string | null
+          qualification_reason?: string | null
+          review_status?: string
+          reviewed_at?: string | null
+          source?: string
+          title?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_results_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "lead_review_owners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_review_owners: {
+        Row: {
+          auth_issuer: string
+          auth_subject: string
+          created_at: string
+          id: string
+        }
+        Insert: {
+          auth_issuer: string
+          auth_subject: string
+          created_at?: string
+          id?: string
+        }
+        Update: {
+          auth_issuer?: string
+          auth_subject?: string
+          created_at?: string
+          id?: string
+        }
+        Relationships: []
+      }
+      lead_runs: {
+        Row: {
+          campaign_name: string | null
+          complete_profiles: number
+          imported_at: string
+          incomplete_profiles: number
+          owner_id: string
+          research_company: string | null
+          returned_leads: number
+          run_id: string
+          source: string
+        }
+        Insert: {
+          campaign_name?: string | null
+          complete_profiles?: number
+          imported_at?: string
+          incomplete_profiles?: number
+          owner_id: string
+          research_company?: string | null
+          returned_leads?: number
+          run_id: string
+          source?: string
+        }
+        Update: {
+          campaign_name?: string | null
+          complete_profiles?: number
+          imported_at?: string
+          incomplete_profiles?: number
+          owner_id?: string
+          research_company?: string | null
+          returned_leads?: number
+          run_id?: string
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_runs_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "lead_review_owners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_sightings: {
+        Row: {
+          campaign_name: string | null
+          complete: boolean
+          lead_id: string
+          owner_id: string
+          run_id: string
+          seen_at: string
+        }
+        Insert: {
+          campaign_name?: string | null
+          complete: boolean
+          lead_id: string
+          owner_id: string
+          run_id: string
+          seen_at?: string
+        }
+        Update: {
+          campaign_name?: string | null
+          complete?: boolean
+          lead_id?: string
+          owner_id?: string
+          run_id?: string
+          seen_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_sightings_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "lead_results"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_sightings_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "lead_review_owners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       openoutfind_ai_budget: {
         Row: {
           budget_day: string
@@ -68,6 +290,10 @@ export type Database = {
       openoutfind_ai_stop: {
         Args: { p_pause_all: boolean; p_run_id: string }
         Returns: undefined
+      }
+      openoutfind_lead_ingest: {
+        Args: { p_code_hash: string; p_payload: Json; p_run_id: string }
+        Returns: Json
       }
     }
     Enums: {

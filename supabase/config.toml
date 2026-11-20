@@ -28,3 +28,6 @@ verify_jwt = false
 # Supabase JWT verification must be disabled for OpenAI-compatible external clients.
 [functions.openoutfind-ai]
 verify_jwt = false
+
+[functions.openoutfind-results]
+verify_jwt = false

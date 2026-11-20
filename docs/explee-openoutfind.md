@@ -88,3 +88,9 @@ python scripts/explee_openoutfind_bridge.py normalize --leads scripts/fixtures/o
 ~~~
 
 The fixtures are entirely **synthetic** and are not real discovered people.
+
+## Saving live results privately (Lead Results)
+
+1. Sign in to Explee and open `/app-auto-gtm/leads` → **Create import code** (one-time, expires in 2 hours).
+2. Run this workflow with `run_live=true` and paste the code into `import_code`.
+3. After normalization, the job posts `artifacts/openoutfind-leads.json` to `…/functions/v1/openoutfind-results` using the existing `OPENOUTFIND_LLM_API_KEY` secret. The code alone cannot read or write data. Personal records are not uploaded as GitHub artifacts unless `upload_leads` is on; the step summary shows counts only.

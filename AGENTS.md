@@ -23,3 +23,8 @@
 - Keep OpenOutFind's pinned discovery package and no-email/no-shared-store workflow safeguards; only the LLM transport changes.
 - Use mocked transport for automatic regression tests; live provider checks remain an explicit manual workflow choice to prevent accidental spend.
 - Deployment and migration notes: `docs/context-dev-migration.md`. Company news and identity enrichment endpoints are not enabled; people discovery uses public-page search and evidence-based extraction.
+
+## Lead Results
+
+- Lead Results data is server-only (no anon/authenticated grants); the `openoutfind-results` function verifies sessions with the Explee login service and scopes every query to the (issuer, subject) owner, because browser-supplied identities are untrusted.
+- GitHub imports need both the server-to-server proxy bearer and a one-time, hashed, expiring import code bound atomically in SQL, because workflow inputs are visible to collaborators; imports never write human review fields.
