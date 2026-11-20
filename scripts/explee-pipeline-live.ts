@@ -7,6 +7,9 @@
 import { contextMap, contextScrape, contextSearch } from '../supabase/functions/_shared/context-dev.ts';
 import { buildProfile, companyUrl, domainOf, extractionFormat, selectPages } from '../supabase/functions/_shared/research-core.ts';
 import { CAMPAIGN_MODEL, classifyCampaignCapabilities, generateRuleCampaigns } from '../supabase/functions/_shared/campaigns-rules.ts';
+import { competitorQueries } from '../supabase/functions/_shared/competitor-core.ts';
+import { candidateResults, discoveryCandidates, discoveryExtraction, enrichCompany, newDiscovery, type DiscoveryCandidate, type Target } from '../supabase/functions/_shared/discovery-core.ts';
+import { freshPeople, peoplePages, peopleQuery } from '../supabase/functions/_shared/people-core.ts';
 import type { CampaignProfile } from '../supabase/functions/_shared/campaigns-core.ts';
 
 type Candidate = { title: string; url: string; description: string; verification: 'unverified_search_result' };
@@ -15,9 +18,9 @@ const report: Record<string, unknown> = {
   generated_at: new Date().toISOString(),
   commit: Deno.env.get('GITHUB_SHA') || 'local',
   engine: CAMPAIGN_MODEL,
-  limits: { map_requests: 1, structured_scrapes: 2, search_requests: 3 },
+  limits: { map_requests: 1, structured_scrapes: 3, search_requests: 3 },
   caveats: [
-    'This is a smoke of company extraction, rule-based campaigns and unverified competitor/buyer/person discovery search previews.',
+    'This smoke reuses production Phase 4 candidate ranking and website evidence verification. It does not persist leads or run the complete Phase 5 contact extractor.',
     'It is NOT a full Supabase workflow or end-to-end company/person verification; no outreach or emails are sent.',
     'Actual provider credits may vary, especially for JSON extraction. This run has request-count limits, not a fixed price cap.',
   ],
@@ -73,34 +76,90 @@ try {
     keywords: c.keywords, source_urls: c.source_urls, evidence_summary: c.evidence_summary,
     audience_basis: c.audience_basis,
   }));
-  const competitorQuery = [built.company_name, capabilities[0]?.capability || 'software', 'business competitors alternatives official site'].filter(Boolean).join(' ').slice(0, 500);
+  const competitorQuery = competitorQueries(profile)[0];
   try {
     report.competitor_search = { query: competitorQuery,
       candidates: rows(await contextSearch(competitorQuery, { retries: 0, limit: 5 })) };
   } catch (error) { warnings.push('Competitor search failed: ' + shortError(error)); }
+
   const first = generated[0];
-  const prospectQuery = (first.keywords.slice(0, 2).join(' OR ') + ' independent business official website').slice(0, 500);
-  let potentialBuyers: Candidate[] = [];
+  const target: Target = {
+    campaign_id: first.id, project_id: 'local-smoke', research_job_id: 'local-smoke', plan_version: 1,
+    name: first.name, audience: first.target_audience, industry: first.target_industry,
+    ideal_customer: first.ideal_customer, keywords: first.keywords,
+    locations: first.target_locations, reasoning: first.reasoning,
+    source_urls: first.source_urls, excluded_domains: [domainOf(root)],
+  };
+  const state = newDiscovery(target);
+  const prospectQuery = state.queries[0];
+  let candidates: DiscoveryCandidate[] = [];
   try {
-    potentialBuyers = rows(await contextSearch(prospectQuery, { retries: 0, limit: 5 }));
-    report.buyer_search = { campaign: first.name, query: prospectQuery, candidates: potentialBuyers };
+    const response = await contextSearch(prospectQuery, { retries: 0, limit: 8 });
+    const events: Array<{ type: string; outcome: string; reason: string; domain?: string; url?: string }> = [];
+    candidates = discoveryCandidates(state, response.results, events);
+    const currentState = { ...state, candidates };
+    report.buyer_search = {
+      campaign: first.name, query: prospectQuery,
+      candidates: candidateResults(currentState).map(company => ({
+        domain: company.domain, website: company.website, search_title: company.search_title,
+        relevance_score: company.relevance_score, research_status: 'unverified',
+        classification: 'search_candidate_only',
+      })),
+      rejected: events.filter(event => event.outcome === 'rejected'),
+    };
   } catch (error) { warnings.push('Buyer search failed: ' + shortError(error)); }
-  // Only a preview: a company's existence and a person's current employment
-  // cannot be verified from a search result alone.
-  const firstBuyer = potentialBuyers.find(row => {
+
+  // Never send decision-maker discovery to a random article, directory or
+  // network membership page merely because its snippet mentions the audience.
+  const excludedPath = /\/(?:articles?|blog|resources?|guides?|learn|compare|tag|network|partner|community|forum|news|categories|events)(?:\/|$)/i;
+  const buyer = candidates.find(candidate => {
     try {
-      const domain = domainOf(new URL(row.url));
-      return domain !== domainOf(root!) && !/(?:^|\.)(linkedin\.com|facebook\.com|wikipedia\.org|google\.com|g2\.com|clutch\.co)$/.test(domain);
+      const url = new URL(candidate.url);
+      return candidate.relevance >= 4 && !excludedPath.test(url.pathname) &&
+        !/\.(?:pdf|docx?|xlsx?)$/i.test(url.pathname) && 
+        (!candidate.search_title || !/\b(?:directory|network|community|guide|article|resources|association)\b/i.test(candidate.search_title));
     } catch { return false; }
   });
-  if (firstBuyer) {
-    const target = new URL(firstBuyer.url).hostname;
-    const peopleQuery = ('site:' + target + ' founder CEO director leadership team').slice(0, 500);
+  if (!buyer) {
+    report.buyer_enrichment = { status: 'skipped', reason: 'No sufficiently relevant business-looking page returned. Search candidates stay unverified.' };
+    report.people_search = { status: 'skipped', reason: 'No website-verified candidate company. Refusing to look up unrelated people.' };
+  } else {
     try {
-      report.people_search = { website: target, query: peopleQuery,
-        candidates: rows(await contextSearch(peopleQuery, { retries: 0, limit: 5 })) };
-    } catch (error) { warnings.push('People search failed: ' + shortError(error)); }
-  } else warnings.push('No candidate buyer website to preview person search.');
+      // This is a third and final structured scrape request.
+      const websitePage = await contextScrape(buyer.url, discoveryExtraction, { retries: 0 });
+      const stateForEnrichment = { ...state, candidates, results: candidateResults({ ...state, candidates }) };
+      const { company, reason } = enrichCompany(stateForEnrichment, buyer, websitePage);
+      report.buyer_enrichment = {
+        candidate_domain: buyer.domain, requested_url: buyer.url, result: company ? {
+          domain: company.domain, website: company.website, name: company.name,
+          description: company.description, industry: company.industry,
+          research_status: company.research_status, confidence: company.confidence,
+          relevance: company.relevance, match_reason: company.match_reason,
+          source_urls: company.source_urls, research_notes: company.research_notes,
+        } : null, reason,
+      };
+      if (!company || company.research_status !== 'verified' || company.relevance === 'Fit unconfirmed') {
+        report.people_search = { status: 'skipped', reason: 'Buyer company identity or audience fit was not sufficiently evidenced. No decision-maker search was made.' };
+      } else {
+        const query = peopleQuery(company, target, 0);
+        try {
+          const response = await contextSearch(query, { retries: 0, limit: 5 });
+          const events = [];
+          const eligible = peoplePages(freshPeople(company.domain), response.results, company.source_urls, events);
+          report.people_search = {
+            status: 'unverified_source_preview', company: company.name, company_domain: company.domain,
+            query, eligible_pages: eligible,
+            rejections: events.filter(event => event.outcome === 'rejected'),
+            note: 'Pages have not been scraped for quoted employment evidence; no named person is verified.',
+          };
+        } catch (error) { warnings.push('People search failed: ' + shortError(error)); }
+      }
+    } catch (error) {
+      warnings.push('Buyer enrichment failed: ' + shortError(error));
+      report.buyer_enrichment = { status: 'unavailable', candidate_domain: buyer.domain };
+      report.people_search = { status: 'skipped', reason: 'Buyer website could not be verified.' };
+    }
+  }
   report.status = 'completed_with_unverified_previews';
 } catch (error) {
   errors.push(shortError(error));
@@ -135,7 +194,7 @@ const markdown = [
   '',
   'All competitor, buyer, and person search results below are **unverified candidates**; inspect cited websites before outreach.',
   '',
-  ...(['competitor_search', 'buyer_search', 'people_search'] as const).flatMap(field => [
+  ...(['competitor_search', 'buyer_search', 'buyer_enrichment', 'people_search'] as const).flatMap(field => [
     '### ' + field.replaceAll('_', ' '),
     '```json',
     JSON.stringify(report[field] || null, null, 2),
