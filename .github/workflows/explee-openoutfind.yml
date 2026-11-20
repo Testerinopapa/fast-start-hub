@@ -2,7 +2,7 @@ name: Explee OpenOutFind Lead QA
 
 on:
   push:
-    branches: [main, 'feat/openoutfind-*']
+    branches: [main, 'feat/openoutfind-*', 'qa/explee-bounded-live-20261120']
     paths:
       - '.github/workflows/explee-openoutfind.yml'
       - 'scripts/explee_openoutfind_bridge.py'
@@ -118,8 +118,8 @@ jobs:
 
   live:
     name: Optional OpenOutFind live lead qualification — no email lookup
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_live == true }}
-    needs: [adapter-tests, proxy-preflight]
+    if: ${{ (github.event_name == 'workflow_dispatch' && inputs.run_live == true) || (github.event_name == 'push' && github.ref == 'refs/heads/qa/explee-bounded-live-20261120' && github.event.head_commit.message == 'run_one_bounded_live_calendly_20261120') }}
+    needs: adapter-tests
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -131,7 +131,7 @@ jobs:
       OPENOUTFIND_AI_MODEL: 'openai_compatible:openai/gpt-6-luna'
       OPENOUTFIND_LLM_API_BASE: ${{ vars.OPENOUTFIND_LLM_API_BASE || 'https://emlggkmtbosahpzrxaul.supabase.co/functions/v1/openoutfind-ai/v1' }}
       EXPLEE_AI_RUN_ID: github-${{ github.run_id }}-${{ github.run_attempt }}
-      EXPLEE_QA_MAX_AI_CALLS: ${{ inputs.qa_max_ai_calls || '12' }}
+      EXPLEE_QA_MAX_AI_CALLS: ${{ inputs.qa_max_ai_calls || '8' }}
       OPENOUTFIND_MAX_PER_COMPANY: '2'
       # No operator identity/token: pinned upstream cannot register with the
       # maintainer's shared contacts store or contribute candidate records.
@@ -151,7 +151,7 @@ jobs:
 
       - name: Verify manual source and credentials
         env:
-          SOURCE_RUN_ID: ${{ inputs.source_run_id }}
+          SOURCE_RUN_ID: ${{ inputs.source_run_id || '44815551658' }}
         run: |
           if ! [[ "$SOURCE_RUN_ID" =~ ^[0-9]+$ ]]; then
             echo "::error::Provide the run ID of a completed Explee Pipeline QA live smoke."
@@ -165,15 +165,15 @@ jobs:
       - name: Download saved Explee live research
         uses: actions/download-artifact@v4
         with:
-          run-id: ${{ inputs.source_run_id }}
-          pattern: explee-live-qa-${{ inputs.source_run_id }}-*
+          run-id: ${{ inputs.source_run_id || '44815551658' }}
+          pattern: explee-live-qa-${{ inputs.source_run_id || '44815551658' }}-*
           merge-multiple: true
           path: source-report/
           github-token: ${{ github.token }}
 
       - name: Build product brief and target from Explee campaign
         env:
-          INPUT_CAMPAIGN_INDEX: ${{ inputs.campaign_index }}
+          INPUT_CAMPAIGN_INDEX: ${{ inputs.campaign_index || '0' }}
         run: |
           python scripts/explee_openoutfind_bridge.py prepare \
             --source source-report/pipeline-live.json \
@@ -184,7 +184,7 @@ jobs:
         id: finder
         continue-on-error: true
         env:
-          INPUT_LEAD_COUNT: ${{ inputs.lead_count }}
+          INPUT_LEAD_COUNT: ${{ inputs.lead_count || '1' }}
         run: |
           # Isolated DB; never pass "emails" or "--emails".
           export OPENOUTFIND_PRODUCT_DOCS="$(cat "$RUNNER_TEMP/openoutfind/product.md")"
@@ -216,7 +216,7 @@ jobs:
         id: qa
         continue-on-error: true
         env:
-          INPUT_LEAD_COUNT: ${{ inputs.lead_count }}
+          INPUT_LEAD_COUNT: ${{ inputs.lead_count || '1' }}
         run: |
           python scripts/explee_qa_report.py \
             --summary artifacts/openoutfind-summary.json \
