@@ -94,8 +94,14 @@ def public_url(value: object) -> str | None:
     if not isinstance(value, str):
         return None
     candidate = value.strip()
-    parsed = urlsplit(candidate if "://" in candidate else "https://" + candidate)
-    if parsed.scheme != "https" or not parsed.hostname or parsed.username or parsed.password:
+    try:
+        if ":" in candidate.split("/")[0] and "://" not in candidate:
+            return None
+        parsed = urlsplit(candidate if "://" in candidate else "https://" + candidate)
+        hostname = parsed.hostname or ""
+        if parsed.scheme != "https" or "." not in hostname or parsed.username or parsed.password or parsed.port:
+            return None
+    except ValueError:
         return None
     return candidate if candidate.startswith("https://") else "https://" + candidate
 
@@ -129,7 +135,7 @@ def normalize(leads_file: Path, metadata_file: Path, output: Path) -> dict:
             continue
         unique.add(key)
         leads.append({
-            "lead_id": safe_text(str(row.get("lead_id")), 100),
+            "lead_id": safe_text(str(row.get("lead_id") or ""), 100) or None,
             "person_name": name or None,
             "title": role or None,
             "company": employer or None,
