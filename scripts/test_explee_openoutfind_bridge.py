@@ -23,6 +23,10 @@ class BridgeTests(unittest.TestCase):
             self.assertIn("Calendly", product)
             self.assertIn("consulting firm", campaign)
             self.assertIn("not verified buyers", campaign.lower())
+            rules = (target / "rules.md").read_text()
+            self.assertIn("conservative", rules)
+            self.assertIn("Count as fit only", rules)
+            self.assertIn("When in doubt, choose no-fit", rules)
 
     def test_no_silent_missing_campaign_or_made_up_profile(self):
         with tempfile.TemporaryDirectory() as temp:
