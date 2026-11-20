@@ -204,6 +204,26 @@ jobs:
           found = [k for k in tokens if k in raw]
           print("Provider error indicators (not raw logs):", ", ".join(found) if found else "none")
           print("Provider stderr bytes:", len(raw.encode("utf-8")))
+          # Restrict diagnostics to error lines; never echo provider results, PII,
+          # request bodies, or bearer credentials on the public repository.
+          import re
+          cleaned = s.read_text(encoding="utf-8", errors="replace") if s.is_file() else ""
+          for key in ("OPENOUTFIND_LLM_API_KEY", "OPENOUTFIND_BETTERCONTACT_API_KEY"):
+            value = os.environ.get(key, "")
+            if value:
+              cleaned = cleaned.replace(value, "[REDACTED]")
+          patterns = ("error:", "exception:", "failed to", "caused by:", "cannot ", "could not ", "unable to ", "invalid configuration", "connection")
+          matched = []
+          for line in cleaned.splitlines():
+            if any(k in line.lower() for k in patterns):
+              scrub = re.sub(r"https?://[^\\s]+", "[URL]", line)
+              scrub = re.sub(r"[\\w.+-]+@[\\w.-]+", "[EMAIL]", scrub)
+              scrub = re.sub(r"(?i)(?:bearer|api_key|token|password)[= :]+\\S+", "[SECRET]", scrub)
+              scrub = re.sub(r"\\b[A-Za-z0-9_\\-/+=]{42,}\\b", "[OPAQUE]", scrub)
+              matched.append(scrub.strip()[:260])
+          for line in matched[-8:]:
+            print("Diagnostic:", line)
+          print("Diagnostic matching lines:", len(matched))
           PY
 
       - name: Normalize candidate leads and write aggregate summary
