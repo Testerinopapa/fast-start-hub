@@ -233,7 +233,7 @@ jobs:
 
   upstream-smoke:
     name: One-time upstream OpenOutFind CLI installation smoke
-    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/feat/openoutfind-lead-discovery-20261120' && github.event.head_commit.message == 'ci: verify upstream OpenOutFind CLI' }}
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/feat/openoutfind-lead-discovery-20261120' && github.event.head_commit.message == 'verify_openoutfind_cli_20261120' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
