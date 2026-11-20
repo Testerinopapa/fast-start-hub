@@ -1,0 +1,35 @@
+{
+  "mode": "offline-integration-fixture",
+  "note": "SYNTHETIC FIELDS FOR TESTS ONLY, NOT LIVE COMPANY RESEARCH",
+  "company": {
+    "company_name": "Calendly",
+    "business_description": "Meeting scheduling software that lets teams share booking links",
+    "products": [
+      {
+        "name": "Meeting scheduling",
+        "description": "Share booking availability",
+        "source_urls": [
+          "https://calendly.com/"
+        ]
+      }
+    ],
+    "source_urls": [
+      "https://calendly.com/"
+    ]
+  },
+  "campaigns": [
+    {
+      "name": "Independent Consulting Practices",
+      "target_audience": "Independent consulting practices",
+      "target_industry": "Professional Services",
+      "ideal_customer": "Small firms with client meetings and appointment intake",
+      "keywords": [
+        "consulting firm",
+        "advisory practice"
+      ],
+      "source_urls": [
+        "https://calendly.com/"
+      ]
+    }
+  ]
+}

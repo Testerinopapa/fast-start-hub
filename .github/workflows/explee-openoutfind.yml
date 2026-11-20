@@ -1,0 +1,232 @@
+name: Explee OpenOutFind Lead QA
+
+on:
+  push:
+    branches: [main, 'feat/openoutfind-*']
+    paths:
+      - '.github/workflows/explee-openoutfind.yml'
+      - 'scripts/explee_openoutfind_bridge.py'
+      - 'scripts/test_explee_openoutfind_bridge.py'
+      - 'scripts/fixtures/openoutfind-*'
+      - 'docs/explee-openoutfind.md'
+  pull_request:
+    paths:
+      - '.github/workflows/explee-openoutfind.yml'
+      - 'scripts/explee_openoutfind_bridge.py'
+      - 'scripts/test_explee_openoutfind_bridge.py'
+      - 'scripts/fixtures/openoutfind-*'
+      - 'docs/explee-openoutfind.md'
+  workflow_dispatch:
+    inputs:
+      run_live:
+        description: 'Explicitly run OpenOutFind with paid LLM qualification (NO email purchases)'
+        type: boolean
+        required: true
+        default: false
+      source_run_id:
+        description: 'GitHub Actions run ID of a completed Explee live research smoke with a pipeline-live.json artifact'
+        type: string
+        required: false
+        default: ''
+      campaign_index:
+        description: 'Zero-based index of the Explee campaign to qualify'
+        type: choice
+        options: ['0', '1', '2', '3', '4', '5']
+        required: true
+        default: '0'
+      lead_count:
+        description: 'Requested new lead records; no email purchases'
+        type: choice
+        options: ['1', '3', '5']
+        required: true
+        default: '3'
+      upload_leads:
+        description: 'Upload personal lead records to GitHub Actions artifacts (not recommended for public repos)'
+        type: boolean
+        required: true
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: explee-openoutfind-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  adapter-tests:
+    name: Offline Explee → OpenOutFind adapter tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Run parser and safety contract tests
+        run: python -m unittest discover -s scripts -p 'test_explee_openoutfind_bridge.py' -v
+
+      - name: Render example using synthetic fixtures only
+        run: |
+          mkdir -p artifacts/example
+          python scripts/explee_openoutfind_bridge.py prepare \
+            --source scripts/fixtures/openoutfind-explee-input.json \
+            --campaign-index 0 --output artifacts/example
+          python scripts/explee_openoutfind_bridge.py normalize \
+            --leads scripts/fixtures/openoutfind-leads.jsonl \
+            --metadata artifacts/example/campaign.json --output artifacts/example
+
+      - name: Upload synthetic offline adapter example
+        uses: actions/upload-artifact@v4
+        with:
+          name: explee-openoutfind-fixture-${{ github.run_id }}
+          path: artifacts/example/
+          retention-days: 14
+
+  live:
+    name: Optional OpenOutFind live lead qualification — no email lookup
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_live == true }}
+    needs: adapter-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      actions: read
+    env:
+      OPENOUTFIND_LLM_API_KEY: ${{ secrets.OPENOUTFIND_LLM_API_KEY }}
+      OPENOUTFIND_BETTERCONTACT_API_KEY: ${{ secrets.OPENOUTFIND_BETTERCONTACT_API_KEY }}
+      OPENOUTFIND_AI_MODEL: ${{ vars.OPENOUTFIND_AI_MODEL || 'openai:gpt-4o-mini' }}
+      OPENOUTFIND_MAX_PER_COMPANY: '2'
+      # No operator identity/token: pinned upstream cannot register with the
+      # maintainer's shared contacts store or contribute candidate records.
+      OPENOUTFIND_OPERATOR_EMAIL: ''
+      OPENOUTFIND_CONTACTS_API_TOKEN: ''
+      OPENOUTFIND_OPERATOR_COUNTRY: ''
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Verify manual source and credentials
+        env:
+          SOURCE_RUN_ID: ${{ inputs.source_run_id }}
+        run: |
+          if ! [[ "$SOURCE_RUN_ID" =~ ^[0-9]+$ ]]; then
+            echo "::error::Provide the run ID of a completed Explee Pipeline QA live smoke."
+            exit 1
+          fi
+          if [ -z "$OPENOUTFIND_LLM_API_KEY" ] || [ -z "$OPENOUTFIND_BETTERCONTACT_API_KEY" ]; then
+            echo "::error::Add OPENOUTFIND_LLM_API_KEY and OPENOUTFIND_BETTERCONTACT_API_KEY as repository secrets."
+            exit 1
+          fi
+
+      - name: Download saved Explee live research
+        uses: actions/download-artifact@v4
+        with:
+          run-id: ${{ inputs.source_run_id }}
+          pattern: explee-live-qa-${{ inputs.source_run_id }}-*
+          merge-multiple: true
+          path: source-report/
+          github-token: ${{ github.token }}
+
+      - name: Build product brief and target from Explee campaign
+        env:
+          INPUT_CAMPAIGN_INDEX: ${{ inputs.campaign_index }}
+        run: |
+          python scripts/explee_openoutfind_bridge.py prepare \
+            --source source-report/pipeline-live.json \
+            --campaign-index "$INPUT_CAMPAIGN_INDEX" \
+            --output "$RUNNER_TEMP/openoutfind"
+
+      - name: Find prospective decision-makers (opt-in, LLM usage)
+        id: finder
+        continue-on-error: true
+        env:
+          INPUT_LEAD_COUNT: ${{ inputs.lead_count }}
+        run: |
+          # Isolated DB; never pass "emails" or "--emails".
+          export OPENOUTFIND_PRODUCT_DOCS="$(cat "$RUNNER_TEMP/openoutfind/product.md")"
+          export OPENOUTFIND_CAMPAIGN_TARGET="$(cat "$RUNNER_TEMP/openoutfind/target.md")"
+          mkdir -p artifacts
+          set +e
+          uvx --python 3.12 \
+            --from 'git+https://github.com/eracle/OpenOutFind@352efd65a84e9106cd08504d2714cd7f5b7bce44' \
+            outfind --db "$RUNNER_TEMP/openoutfind-run.sqlite3" \
+            find "$INPUT_LEAD_COUNT" --json \
+            > "$RUNNER_TEMP/openoutfind-results.jsonl" \
+            2> "$RUNNER_TEMP/openoutfind-stderr.json"
+          result=$?
+          echo "OpenOutFind exited with code $result; no personal records are logged."
+          exit "$result"
+
+      - name: Normalize candidate leads and write aggregate summary
+        if: always()
+        id: report
+        continue-on-error: true
+        run: |
+          python scripts/explee_openoutfind_bridge.py normalize \
+            --leads "$RUNNER_TEMP/openoutfind-results.jsonl" \
+            --metadata "$RUNNER_TEMP/openoutfind/campaign.json" \
+            --output artifacts
+
+      - name: Publish aggregate results (no personal information)
+        if: always()
+        run: |
+          {
+            echo '## Explee + OpenOutFind'
+            echo ''
+            echo 'Provider + LLM lead qualification trial. No emails were purchased or sent.'
+            echo 'Professional identity, current employment, and prospect fit require independent verification.'
+            echo ''
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ -f artifacts/openoutfind-summary.json ]; then
+            python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          s=json.load(open('artifacts/openoutfind-summary.json'))
+          print(f"- Campaign: {s.get('campaign_name')}")
+          print(f"- Candidate people: {s.get('returned_leads')}")
+          print(f"- Complete fields: {s.get('complete_profiles')}")
+          print(f"- Incomplete records: {s.get('incomplete_profiles')}")
+          print(f"- Independently verified people: {s.get('independently_verified_people')}")
+          print("- No employment verification or outreach performed.")
+          PY
+          else
+            echo 'No normalized report; inspect setup and step outcomes.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload aggregate report only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: explee-openoutfind-summary-${{ github.run_id }}
+          path: artifacts/openoutfind-summary.json
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload personal lead report only after explicit disclosure choice
+        if: ${{ always() && inputs.upload_leads == true }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: explee-openoutfind-personal-leads-${{ github.run_id }}
+          path: artifacts/openoutfind-leads.json
+          if-no-files-found: warn
+          retention-days: 1
+
+      - name: Fail on provider or normalization errors
+        if: always()
+        env:
+          FINDER_RESULT: ${{ steps.finder.outcome }}
+          REPORT_RESULT: ${{ steps.report.outcome }}
+        run: |
+          if [ "$FINDER_RESULT" != success ] || [ "$REPORT_RESULT" != success ]; then
+            echo "::error::OpenOutFind did not finish successfully; no verified-lead claim is made."
+            exit 1
+          fi
