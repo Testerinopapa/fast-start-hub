@@ -23,3 +23,8 @@ verify_jwt = false
 
 [functions.people-discovery]
 verify_jwt = false
+
+# GitHub Actions uses a dedicated bearer token enforced by the function itself.
+# Supabase JWT verification must be disabled for OpenAI-compatible external clients.
+[functions.openoutfind-ai]
+verify_jwt = false
