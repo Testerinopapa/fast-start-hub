@@ -8,7 +8,8 @@ const profile = { company_name: 'PrimKeet', business_description: 'English vocab
 Deno.test('competitor queries use the researched business and candidates deduplicate business domains', () => {
   const queries = competitorQueries(profile);
   assert.equal(queries.length, 3);
-  assert.ok(queries[0].includes('english'));
+  // Prefer the product category, not an incidental keyword from marketing copy.
+  assert.ok(queries[0].includes('language learning software'));
   assert.ok(queries[1].includes('student'));
   assert.ok(queries[2].includes('PrimKeet'));
   const candidates = collectCandidates(profile, [], [

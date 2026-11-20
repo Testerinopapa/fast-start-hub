@@ -173,7 +173,18 @@ Deno.test('company and people discovery require auth and ownership before Contex
 });
 
 Deno.test('campaign CRUD persists selection, isolates owners, rejects stale writes and performs no provider requests', async () => {
-  let plan: CampaignPlan | null = null;
+  // CRUD should start with a previously saved plan; generation has its own tests.
+  // Current endpoint checks the completed research job and project generation state.
+  let plan: CampaignPlan | null = {
+    status: 'completed', version: 1, selected_ids: [], warnings: [],
+    campaigns: Array.from({ length: 4 }, (_, i) => ({
+      id: crypto.randomUUID(), origin: 'suggested' as const, audience_basis: 'inferred' as const,
+      name: 'Target audience ' + (i + 1), target_audience: 'Business segment ' + (i + 1),
+      target_industry: 'Professional Services', ideal_customer: 'Business users evaluating scheduling tools',
+      keywords: ['consulting firm', 'business services'], target_locations: [],
+      reasoning: 'Fixture audience for CRUD contract testing.', source_urls: ['https://company.com/'],
+    })),
+  };
   const foreignJob = crypto.randomUUID();
   const ownProfile = { ...competitorProfile({ ...initialCompetitors(), status: 'completed' }), campaign_plan: plan };
   await withMock(async calls => {
@@ -209,6 +220,14 @@ Deno.test('campaign CRUD persists selection, isolates owners, rejects stale writ
     if (url.pathname.endsWith('/company_profiles')) {
       assert.equal(url.searchParams.get('owner_id'), `eq.${owner}`);
       return response(url.searchParams.get('job_id') === `eq.${foreignJob}` ? null : { ...ownProfile, campaign_plan: plan });
+    }
+    if (url.pathname.endsWith('/research_jobs')) {
+      assert.equal(url.searchParams.get('owner_id'), `eq.${owner}`);
+      return response({ status: 'completed' });
+    }
+    if (url.pathname.endsWith('/projects')) {
+      assert.equal(url.searchParams.get('owner_id'), `eq.${owner}`);
+      return response({ id: jobId, campaign_generation: null });
     }
     if (url.pathname.endsWith('/autogtm_save_campaigns')) {
       assert.equal(body?.p_owner, owner);
