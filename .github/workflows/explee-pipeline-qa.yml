@@ -105,6 +105,9 @@ jobs:
           cd supabase/functions
           deno task check > ../../artifacts/type-check.log 2>&1
           result=$?
+          deno check ../../scripts/explee-pipeline-fixtures.ts ../../scripts/explee-pipeline-live.ts >> ../../artifacts/type-check.log 2>&1
+          scripts_result=$?
+          if [ "$scripts_result" -ne 0 ]; then result="$scripts_result"; fi
           cat ../../artifacts/type-check.log
           exit "$result"
 
