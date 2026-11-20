@@ -2,7 +2,7 @@ name: Explee OpenOutFind Lead QA
 
 on:
   push:
-    branches: [main, 'feat/openoutfind-*', 'qa/explee-bounded-live-20261120']
+    branches: [main, 'feat/openoutfind-*']
     paths:
       - '.github/workflows/explee-openoutfind.yml'
       - 'scripts/explee_openoutfind_bridge.py'
@@ -109,6 +109,29 @@ jobs:
             --leads scripts/fixtures/openoutfind-leads.jsonl \
             --metadata artifacts/example/campaign.json --output artifacts/example
 
+      - name: Smoke-test CLI QA reporting on synthetic partial results
+        run: |
+          mkdir -p artifacts/qa-smoke
+          echo 1 > artifacts/qa-smoke/exit-code.txt
+          echo '{"schema_version":"explee.openoutfind.qa-metrics.v1","max_ai_requests":8,"ai_requests_sent":8,"requests_blocked_locally":1,"local_ai_cap_hit":true,"requests_by_phase":{"lead_qualification":8}}' > artifacts/qa-smoke/metrics.json
+          echo '{"error":{"type":"goal_unreached","message":"synthetic provider details never included in report"}}' > artifacts/qa-smoke/stderr.jsonl
+          python scripts/explee_qa_report.py \
+            --summary artifacts/example/openoutfind-summary.json \
+            --metrics artifacts/qa-smoke/metrics.json \
+            --stderr artifacts/qa-smoke/stderr.jsonl \
+            --exit-code-file artifacts/qa-smoke/exit-code.txt \
+            --requested 3 \
+            --output artifacts/qa-smoke/qa.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          result = json.loads(Path("artifacts/qa-smoke/qa.json").read_text())
+          assert result["result"] == "partial"
+          assert result["reason"] == "local_ai_budget"
+          assert result["ai_requests_sent"] == 8
+          assert "synthetic provider details" not in json.dumps(result)
+          PY
+
       - name: Upload synthetic offline adapter example
         uses: actions/upload-artifact@v4
         with:
@@ -118,8 +141,8 @@ jobs:
 
   live:
     name: Optional OpenOutFind live lead qualification — no email lookup
-    if: ${{ (github.event_name == 'workflow_dispatch' && inputs.run_live == true) || (github.event_name == 'push' && github.ref == 'refs/heads/qa/explee-bounded-live-20261120' && github.event.head_commit.message == 'run_one_bounded_live_calendly_20261120') }}
-    needs: adapter-tests
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_live == true }}
+    needs: [adapter-tests, proxy-preflight]
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -131,7 +154,7 @@ jobs:
       OPENOUTFIND_AI_MODEL: 'openai_compatible:openai/gpt-6-luna'
       OPENOUTFIND_LLM_API_BASE: ${{ vars.OPENOUTFIND_LLM_API_BASE || 'https://emlggkmtbosahpzrxaul.supabase.co/functions/v1/openoutfind-ai/v1' }}
       EXPLEE_AI_RUN_ID: github-${{ github.run_id }}-${{ github.run_attempt }}
-      EXPLEE_QA_MAX_AI_CALLS: ${{ inputs.qa_max_ai_calls || '8' }}
+      EXPLEE_QA_MAX_AI_CALLS: ${{ inputs.qa_max_ai_calls || '12' }}
       OPENOUTFIND_MAX_PER_COMPANY: '2'
       # No operator identity/token: pinned upstream cannot register with the
       # maintainer's shared contacts store or contribute candidate records.
@@ -151,7 +174,7 @@ jobs:
 
       - name: Verify manual source and credentials
         env:
-          SOURCE_RUN_ID: ${{ inputs.source_run_id || '44815551658' }}
+          SOURCE_RUN_ID: ${{ inputs.source_run_id }}
         run: |
           if ! [[ "$SOURCE_RUN_ID" =~ ^[0-9]+$ ]]; then
             echo "::error::Provide the run ID of a completed Explee Pipeline QA live smoke."
@@ -165,15 +188,15 @@ jobs:
       - name: Download saved Explee live research
         uses: actions/download-artifact@v4
         with:
-          run-id: ${{ inputs.source_run_id || '44815551658' }}
-          pattern: explee-live-qa-${{ inputs.source_run_id || '44815551658' }}-*
+          run-id: ${{ inputs.source_run_id }}
+          pattern: explee-live-qa-${{ inputs.source_run_id }}-*
           merge-multiple: true
           path: source-report/
           github-token: ${{ github.token }}
 
       - name: Build product brief and target from Explee campaign
         env:
-          INPUT_CAMPAIGN_INDEX: ${{ inputs.campaign_index || '0' }}
+          INPUT_CAMPAIGN_INDEX: ${{ inputs.campaign_index }}
         run: |
           python scripts/explee_openoutfind_bridge.py prepare \
             --source source-report/pipeline-live.json \
@@ -184,7 +207,7 @@ jobs:
         id: finder
         continue-on-error: true
         env:
-          INPUT_LEAD_COUNT: ${{ inputs.lead_count || '1' }}
+          INPUT_LEAD_COUNT: ${{ inputs.lead_count }}
         run: |
           # Isolated DB; never pass "emails" or "--emails".
           export OPENOUTFIND_PRODUCT_DOCS="$(cat "$RUNNER_TEMP/openoutfind/product.md")"
@@ -197,7 +220,7 @@ jobs:
             > "$RUNNER_TEMP/openoutfind-results.jsonl" \
             2> "$RUNNER_TEMP/openoutfind-stderr.json"
           result=$?
-          printf "%s\\n" "$result" > "$RUNNER_TEMP/openoutfind-exit-code.txt"
+          echo "$result" > "$RUNNER_TEMP/openoutfind-exit-code.txt"
           echo "OpenOutFind exited with code $result; no personal records are logged."
           exit "$result"
 
@@ -216,7 +239,7 @@ jobs:
         id: qa
         continue-on-error: true
         env:
-          INPUT_LEAD_COUNT: ${{ inputs.lead_count || '1' }}
+          INPUT_LEAD_COUNT: ${{ inputs.lead_count }}
         run: |
           python scripts/explee_qa_report.py \
             --summary artifacts/openoutfind-summary.json \
