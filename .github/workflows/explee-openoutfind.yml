@@ -172,7 +172,7 @@ jobs:
         id: finder
         continue-on-error: true
         env:
-          INPUT_LEAD_COUNT: ${{ inputs.lead_count || '5' }}
+          INPUT_LEAD_COUNT: ${{ inputs.lead_count || '3' }}
         run: |
           # Isolated DB; never pass "emails" or "--emails".
           export OPENOUTFIND_PRODUCT_DOCS="$(cat "$RUNNER_TEMP/openoutfind/product.md")"
@@ -246,14 +246,14 @@ jobs:
             --output artifacts
 
       - name: Seal real lead records for private QA (public key encryption)
-        if: ${{ steps.finder.outcome == 'success' && steps.report.outcome == 'success' }}
+        if: ${{ steps.report.outcome == 'success' }}
         run: |
           uv run --no-project --python 3.12 --with cryptography \
             python scripts/explee_qa_seal.py \
             artifacts/openoutfind-leads.json artifacts/explee-qa-sealed.json
 
       - name: Upload ciphertext only (no plaintext leads)
-        if: ${{ steps.finder.outcome == 'success' && steps.report.outcome == 'success' }}
+        if: ${{ steps.report.outcome == 'success' }}
         uses: actions/upload-artifact@v4
         with:
           name: explee-qa-encrypted-${{ github.run_id }}
