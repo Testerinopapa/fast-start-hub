@@ -10,7 +10,6 @@ import ApiDocs from './components/docs/ApiDocs';
 import ExplorerPage from './components/explorer/ExplorerPage';
 import SignInPage from './components/auth/SignInPage';
 import AppAutoGtmPage from './components/autogtm/AppAutoGtmPage';
-import LeadResultsPage from './components/autogtm/LeadResultsPage';
 import AutoGtmWorkflowPage from './components/autogtm/AutoGtmWorkflowPage';
 
 function NotFoundPage() {
@@ -94,8 +93,6 @@ function MainRouter() {
   }
 
   switch (currentProduct) {
-    case 'auto-gtm-leads':
-      return <LeadResultsPage />;
     case 'app-auto-gtm':
       return <AppAutoGtmPage />;
     case 'auto-gtm-explore':

@@ -426,16 +426,6 @@ export default function AutoGtmSidebar({
 
       {/* Bottom User Profile Section */}
       <div className="p-3 border-t border-black/[0.08] shrink-0">
-        <a
-          href={PRODUCT_ROUTES.AUTO_GTM_LEADS}
-          onClick={(e) => { e.preventDefault(); onClose?.(); navigate(PRODUCT_ROUTES.AUTO_GTM_LEADS); }}
-          className="mb-1 flex items-center gap-2.5 rounded-lg p-1.5 text-sm text-gray-800 no-underline hover:bg-black/[0.04]"
-          aria-label="Lead Results"
-          title="Lead Results"
-        >
-          <span className="size-6 shrink-0 rounded-md bg-[#00FBBC]/30 flex items-center justify-center text-xs font-bold">L</span>
-          {!collapsed && <span>Lead Results</span>}
-        </a>
         <button
           type="button"
           className="w-full flex items-center justify-between rounded-lg p-1.5 text-left hover:bg-black/[0.04] transition-colors group"

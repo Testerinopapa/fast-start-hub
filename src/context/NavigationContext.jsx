@@ -14,7 +14,6 @@ export const PRODUCT_ROUTES = {
   REGISTER: '/register',
   VERIFICATION_CODE: '/register/verification-code',
   AUTO_GTM: '/app-auto-gtm',
-  AUTO_GTM_LEADS: '/app-auto-gtm/leads',
   AUTO_GTM_EXPLORE: '/auto-gtm/company',
 };
 
@@ -84,11 +83,6 @@ export function resolveProductFromLocation() {
       domain,
       canonicalPath: `/auto-gtm/company/${domain}/explore`,
     };
-  }
-
-  // 0d0. Private Lead Results (/app-auto-gtm/leads)
-  if (/^\/app-auto-gtm\/leads\/?$/.test(pathname)) {
-    return { product: 'auto-gtm-leads', canonicalPath: PRODUCT_ROUTES.AUTO_GTM_LEADS };
   }
 
   // 0d. AutoGTM app entry (/app-auto-gtm)

@@ -291,10 +291,6 @@ export type Database = {
         Args: { p_pause_all: boolean; p_run_id: string }
         Returns: undefined
       }
-      openoutfind_lead_ingest: {
-        Args: { p_code_hash: string; p_payload: Json; p_run_id: string }
-        Returns: Json
-      }
     }
     Enums: {
       [_ in never]: never
