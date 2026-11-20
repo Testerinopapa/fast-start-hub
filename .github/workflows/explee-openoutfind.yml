@@ -2,7 +2,7 @@ name: Explee OpenOutFind Lead QA
 
 on:
   push:
-    branches: [main, 'feat/openoutfind-*', 'test/lovable-openoutfind-*']
+    branches: [main, 'feat/openoutfind-*']
     paths:
       - '.github/workflows/explee-openoutfind.yml'
       - 'scripts/explee_openoutfind_bridge.py'
@@ -253,10 +253,9 @@ jobs:
           fi
 
 
-  # One-time branch-only preflight runs only on the exact commit message below.
   proxy-preflight:
     name: Lovable AI proxy no-credit connection check
-    if: ${{ (github.event_name == 'workflow_dispatch' && (inputs.check_proxy == true || inputs.run_live == true)) || (github.event_name == 'push' && github.ref == 'refs/heads/test/lovable-openoutfind-live-20261120' && github.event.head_commit.message == 'verify_lovable_proxy_connection_20261120') }}
+    if: ${{ github.event_name == 'workflow_dispatch' && (inputs.check_proxy == true || inputs.run_live == true) }}
     needs: adapter-tests
     runs-on: ubuntu-latest
     timeout-minutes: 5
