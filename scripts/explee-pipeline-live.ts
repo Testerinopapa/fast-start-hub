@@ -1,6 +1,6 @@
 /**
  * Opt-in REAL Context.dev smoke without Supabase.
- * Strict ceilings: at most 1 map, 2 structured scrapes, 3 searches.
+ * Strict ceilings: at most 1 map, 3 structured scrapes, 3 searches.
  * Search snippets are unverified candidates, never qualified or verified leads.
  * Context.dev charges by request/result; this is NOT a dollar-amount limit.
  */
@@ -11,6 +11,7 @@ import { competitorQueries } from '../supabase/functions/_shared/competitor-core
 import { candidateResults, discoveryCandidates, discoveryExtraction, enrichCompany, newDiscovery, type DiscoveryCandidate, type DiscoveryEvent, type Target } from '../supabase/functions/_shared/discovery-core.ts';
 import { freshPeople, peoplePages, peopleQuery, type PeopleDiagnostic } from '../supabase/functions/_shared/people-core.ts';
 import type { CampaignProfile } from '../supabase/functions/_shared/campaigns-core.ts';
+import { selectBuyerPreview } from './explee-pipeline-selection.ts';
 
 type Candidate = { title: string; url: string; description: string; verification: 'unverified_search_result' };
 const report: Record<string, unknown> = {
@@ -111,15 +112,7 @@ try {
 
   // Never send decision-maker discovery to a random article, directory or
   // network membership page merely because its snippet mentions the audience.
-  const excludedPath = /\/(?:articles?|blog|resources?|guides?|learn|compare|tag|network|partner|community|forum|news|categories|events)(?:\/|$)/i;
-  const buyer = candidates.find(candidate => {
-    try {
-      const url = new URL(candidate.url);
-      return candidate.relevance >= 4 && !excludedPath.test(url.pathname) &&
-        !/\.(?:pdf|docx?|xlsx?)$/i.test(url.pathname) && 
-        (!candidate.search_title || !/\b(?:directory|network|community|guide|article|resources|association)\b/i.test(candidate.search_title));
-    } catch { return false; }
-  });
+  const buyer = selectBuyerPreview(candidates);
   if (!buyer) {
     report.buyer_enrichment = { status: 'skipped', reason: 'No sufficiently relevant business-looking page returned. Search candidates stay unverified.' };
     report.people_search = { status: 'skipped', reason: 'No website-verified candidate company. Refusing to look up unrelated people.' };
