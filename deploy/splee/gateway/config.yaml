@@ -1,0 +1,23 @@
+# Anthropic /v1/messages model alias for Splee's Claude SDK client.
+# LiteLLM translates to the OpenAI-style Chat Completions supported by Lovable AI.
+# This does NOT imply full Claude WebSearch/WebFetch tool compatibility.
+model_list:
+  - model_name: claude-sonnet-5-5
+    litellm_params:
+      model: openai/openai/gpt-6-luna
+      api_base: https://ai.gateway.lovable.dev/v1
+      api_key: os.environ/LOVABLE_API_KEY
+      extra_headers:
+        Lovable-API-Key: os.environ/LOVABLE_API_KEY
+        X-Lovable-AIG-SDK: tanstack-ai
+      timeout: 45
+      max_retries: 0
+
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY
+  disable_spend_logs: true
+
+litellm_settings:
+  set_verbose: false
+  drop_params: false
+  request_timeout: 50
