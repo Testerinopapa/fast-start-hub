@@ -8,8 +8,8 @@ import { contextMap, contextScrape, contextSearch } from '../supabase/functions/
 import { buildProfile, companyUrl, domainOf, extractionFormat, selectPages } from '../supabase/functions/_shared/research-core.ts';
 import { CAMPAIGN_MODEL, classifyCampaignCapabilities, generateRuleCampaigns } from '../supabase/functions/_shared/campaigns-rules.ts';
 import { competitorQueries } from '../supabase/functions/_shared/competitor-core.ts';
-import { candidateResults, discoveryCandidates, discoveryExtraction, enrichCompany, newDiscovery, type DiscoveryCandidate, type Target } from '../supabase/functions/_shared/discovery-core.ts';
-import { freshPeople, peoplePages, peopleQuery } from '../supabase/functions/_shared/people-core.ts';
+import { candidateResults, discoveryCandidates, discoveryExtraction, enrichCompany, newDiscovery, type DiscoveryCandidate, type DiscoveryEvent, type Target } from '../supabase/functions/_shared/discovery-core.ts';
+import { freshPeople, peoplePages, peopleQuery, type PeopleDiagnostic } from '../supabase/functions/_shared/people-core.ts';
 import type { CampaignProfile } from '../supabase/functions/_shared/campaigns-core.ts';
 
 type Candidate = { title: string; url: string; description: string; verification: 'unverified_search_result' };
@@ -95,7 +95,7 @@ try {
   let candidates: DiscoveryCandidate[] = [];
   try {
     const response = await contextSearch(prospectQuery, { retries: 0, limit: 8 });
-    const events: Array<{ type: string; outcome: string; reason: string; domain?: string; url?: string }> = [];
+    const events: DiscoveryEvent[] = [];
     candidates = discoveryCandidates(state, response.results, events);
     const currentState = { ...state, candidates };
     report.buyer_search = {
@@ -144,7 +144,7 @@ try {
         const query = peopleQuery(company, target, 0);
         try {
           const response = await contextSearch(query, { retries: 0, limit: 5 });
-          const events = [];
+          const events: PeopleDiagnostic[] = [];
           const eligible = peoplePages(freshPeople(company.domain), response.results, company.source_urls, events);
           report.people_search = {
             status: 'unverified_source_preview', company: company.name, company_domain: company.domain,
