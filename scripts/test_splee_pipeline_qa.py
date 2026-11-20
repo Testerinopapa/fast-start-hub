@@ -129,6 +129,29 @@ class SpleeQAContractTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "^splee_http_403$"):
             qa.get_json(Failure(), "https://splee.example", "my_fake_token", "/api/v1/projects")
 
+    def test_pagination_reads_all_pages_and_warns_if_truncated(self):
+        records = [{"company": {"name": "Synthetic", "domain": f"sample{i}.example", "source_url": "https://sample.example"}} for i in range(101)]
+        class Response:
+            status = 200
+            def __init__(self, payload): self.payload = payload
+            def __enter__(self): return self
+            def __exit__(self, *args): return False
+            def read(self, n): return json.dumps(self.payload).encode()
+        class Opener:
+            def open(self, request, timeout):
+                from urllib.parse import parse_qs, urlsplit
+                q = parse_qs(urlsplit(request.full_url).query)
+                page = int(q["page"][0])
+                return Response({"items": records[(page - 1) * 100:page * 100], "total": 101})
+        result = qa.paginated(Opener(), "https://splee.example", "secret", "/api/v1/projects/x/companies")
+        self.assertEqual(len(result["items"]), 101)
+        self.assertFalse(result["truncated"])
+
+        sample = self.snapshot()
+        sample["companies"] = {**result, "truncated": True}
+        report = qa.evaluate(sample)
+        self.assertIn("not_all_records_scanned", report["stages"]["buyer_companies"]["flags"])
+
     def test_mock_read_only_endpoints(self):
         class Response:
             status = 200
@@ -146,10 +169,10 @@ class SpleeQAContractTests(unittest.TestCase):
         paths = {
             "/api/v1/projects": [source["project"]],
             f"/api/v1/projects/{project_id}/campaigns": source["campaigns"],
-            f"/api/v1/projects/{project_id}/companies": source["companies"],
-            f"/api/v1/projects/{project_id}/leads": source["leads"],
-            f"/api/v1/projects/{project_id}/research": source["research"],
-            f"/api/v1/emails?project_id={project_id}&status=draft": source["emails"],
+            f"/api/v1/projects/{project_id}/companies?page=1&per_page=100": source["companies"],
+            f"/api/v1/projects/{project_id}/leads?page=1&per_page=100": source["leads"],
+            f"/api/v1/projects/{project_id}/research?page=1&per_page=100": source["research"],
+            f"/api/v1/emails?project_id={project_id}&status=draft&page=1&per_page=100": source["emails"],
         }
         class Opener:
             def open(self, req, timeout):
