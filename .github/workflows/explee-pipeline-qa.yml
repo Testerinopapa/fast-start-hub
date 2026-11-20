@@ -1,0 +1,221 @@
+name: Explee Pipeline QA
+
+on:
+  push:
+    branches: [main, 'ci/**']
+    paths:
+      - '.github/workflows/explee-pipeline-qa.yml'
+      - 'supabase/functions/**'
+      - 'scripts/explee-pipeline-fixtures.ts'
+      - 'scripts/explee-pipeline-live.ts'
+      - 'docs/explee-pipeline-qa.md'
+  pull_request:
+    paths:
+      - '.github/workflows/explee-pipeline-qa.yml'
+      - 'supabase/functions/**'
+      - 'scripts/explee-pipeline-fixtures.ts'
+      - 'scripts/explee-pipeline-live.ts'
+      - 'docs/explee-pipeline-qa.md'
+  workflow_dispatch:
+    inputs:
+      repeats:
+        description: 'Repeat each offline test to expose flaky behavior'
+        required: true
+        default: '1'
+        type: choice
+        options: ['1', '3', '5']
+      live_context_dev:
+        description: 'Opt in to PAID live Context.dev requests (requires repository secret)'
+        type: boolean
+        required: true
+        default: false
+      company:
+        description: 'Company website for the optional paid research smoke'
+        type: string
+        required: true
+        default: 'https://calendly.com'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: explee-pipeline-qa-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  offline:
+    name: Offline research and campaign tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DENO_NO_UPDATE_CHECK: '1'
+      TEST_REPEATS: ${{ inputs.repeats || '1' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.6
+          cache: true
+
+      - name: Prepare reports
+        run: mkdir -p artifacts
+
+      - name: Campaign relevance and preservation tests
+        id: campaigns
+        continue-on-error: true
+        run: |
+          set +e
+          cd supabase/functions
+          deno test --allow-env --repeats="${TEST_REPEATS}" --junit-path=../../artifacts/campaign-tests.xml _shared/calendly-regression_test.ts > ../../artifacts/campaign-tests.log 2>&1
+          result=$?
+          cat ../../artifacts/campaign-tests.log
+          exit "$result"
+
+      - name: Research core and Context.dev mocks
+        id: core
+        if: always()
+        continue-on-error: true
+        run: |
+          set +e
+          cd supabase/functions
+          deno test --allow-env --repeats="${TEST_REPEATS}" --junit-path=../../artifacts/research-tests.xml _shared/research-core_test.ts _shared/context-dev_test.ts > ../../artifacts/research-tests.log 2>&1
+          result=$?
+          cat ../../artifacts/research-tests.log
+          exit "$result"
+
+      - name: Mocked endpoint and discovery contract tests
+        id: endpoints
+        if: always()
+        continue-on-error: true
+        run: |
+          set +e
+          cd supabase/functions
+          deno test --no-check --allow-env --repeats="${TEST_REPEATS}" --junit-path=../../artifacts/endpoint-tests.xml _shared/endpoints_test.ts > ../../artifacts/endpoint-tests.log 2>&1
+          result=$?
+          cat ../../artifacts/endpoint-tests.log
+          exit "$result"
+
+      - name: Edge TypeScript check
+        id: types
+        if: always()
+        continue-on-error: true
+        run: |
+          set +e
+          cd supabase/functions
+          deno task check > ../../artifacts/type-check.log 2>&1
+          result=$?
+          cat ../../artifacts/type-check.log
+          exit "$result"
+
+      - name: Generate actual offline campaign output and assertions
+        id: fixture_report
+        if: always()
+        continue-on-error: true
+        run: deno run --allow-env=GITHUB_SHA --allow-write=artifacts scripts/explee-pipeline-fixtures.ts
+
+      - name: Publish QA summary
+        if: always()
+        env:
+          CAMPAIGNS: ${{ steps.campaigns.outcome }}
+          CORE: ${{ steps.core.outcome }}
+          ENDPOINTS: ${{ steps.endpoints.outcome }}
+          TYPES: ${{ steps.types.outcome }}
+          FIXTURES: ${{ steps.fixture_report.outcome }}
+        run: |
+          {
+            echo '## Explee Pipeline QA — offline'
+            echo ''
+            echo '| Check | Result |'
+            echo '|---|---|'
+            echo "| Campaign regression | $CAMPAIGNS |"
+            echo "| Research + Context.dev mock tests | $CORE |"
+            echo "| Mock endpoint and discovery tests | $ENDPOINTS |"
+            echo "| TypeScript checks | $TYPES |"
+            echo "| Campaign output report | $FIXTURES |"
+            echo ''
+            if [ -f artifacts/pipeline-fixtures.md ]; then
+              cat artifacts/pipeline-fixtures.md
+            else
+              echo '> Report generation failed. See job logs and uploaded artifacts.'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload offline logs, JUnit results, and campaign output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: explee-offline-qa-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Fail when any regression or report fails
+        if: always()
+        env:
+          CAMPAIGNS: ${{ steps.campaigns.outcome }}
+          CORE: ${{ steps.core.outcome }}
+          ENDPOINTS: ${{ steps.endpoints.outcome }}
+          TYPES: ${{ steps.types.outcome }}
+          FIXTURES: ${{ steps.fixture_report.outcome }}
+        run: |
+          for result in "$CAMPAIGNS" "$CORE" "$ENDPOINTS" "$TYPES" "$FIXTURES"; do
+            if [ "$result" != success ]; then
+              echo "::error::At least one Explee offline check failed. Download the uploaded artifact and inspect the logs."
+              exit 1
+            fi
+          done
+
+  live:
+    name: Optional paid Context.dev smoke (no Supabase)
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.live_context_dev == true }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      DENO_NO_UPDATE_CHECK: '1'
+      CONTEXT_DEV_API_KEY: ${{ secrets.CONTEXT_DEV_API_KEY }}
+      EXPLEE_APPROVE_PAID_RUN: 'yes'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.6
+          cache: true
+
+      - name: Generate company/campaign output and unverified discovery previews
+        id: live_report
+        continue-on-error: true
+        env:
+          INPUT_COMPANY: ${{ inputs.company }}
+        run: |
+          mkdir -p artifacts
+          deno run --allow-env=CONTEXT_DEV_API_KEY,EXPLEE_APPROVE_PAID_RUN,GITHUB_SHA --allow-net=api.context.dev --allow-write=artifacts scripts/explee-pipeline-live.ts "$INPUT_COMPANY"
+
+      - name: Publish live report summary
+        if: always()
+        run: |
+          if [ -f artifacts/pipeline-live.md ]; then
+            cat artifacts/pipeline-live.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo 'The live smoke failed before a report was generated. Inspect the job log.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload live research report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: explee-live-qa-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Fail when the live smoke fails
+        if: always()
+        env:
+          RESULT: ${{ steps.live_report.outcome }}
+        run: |
+          if [ "$RESULT" != success ]; then
+            echo "::error::Live smoke failed. See the uploaded JSON/Markdown report."
+            exit 1
+          fi
