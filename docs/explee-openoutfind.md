@@ -22,7 +22,7 @@ These are **provider profile matches and an LLM-generated qualification hypothes
 
 Optional Actions **repository variable** `OPENOUTFIND_LLM_API_BASE` for the deployed Lovable AI proxy URL. The default currently points to `https://emlggkmtbosahpzrxaul.supabase.co/functions/v1/openoutfind-ai/v1`; override it if Lovable hosts the function elsewhere. The model is fixed to `openai_compatible:openai/gpt-6-luna` to match the proxy schema; the older `OPENOUTFIND_AI_MODEL` variable is ignored. The existing `CONTEXT_DEV_API_KEY` is for research. **Do not add keys to code, issues, logs or artifacts.**
 
-**Expenses:** BetterContact index searches are described as free by upstream; Lovable AI inference consumes Lovable credits. We call **find N --json** and never use **emails** or **--emails**, so no paid email lookup is authorized. The 1/3/5-lead limit is **not a strict token budget**. GitHub Actions timeout bounds runtime, not provider spend.
+**Expenses:** BetterContact index searches are described as free by upstream; Lovable AI inference consumes Lovable credits. We call **find N --json** and never use **emails** or **--emails**, so no paid email lookup is authorized. The 1/3/5-lead limit is **not a strict token budget**. The additional local `qa_max_ai_calls` limit (8, 12 or 16, default 12) stops outgoing LLM HTTP calls **before** the cap is exceeded. It limits request count, not total credits/tokens per request. The server-side 40-call/run and 100-call/day safeguards remain in force; GitHub's 30-minute timeout provides an additional ceiling.
 
 ## Lovable AI deployment requirements
 
@@ -64,19 +64,20 @@ Explee's repository is public. **Detailed personal lead reports are not uploaded
 
 The adapter reads the previously produced Explee research JSON, then:
 
-1. Prepares a researched product brief and a campaign target hypothesis from the selected campaign.
+1. Prepares a researched product brief, campaign target hypothesis and explicit conservative lead-fit rules from the selected campaign. The rules are passed with OpenOutFind's `--brief` rather than consuming an AI request to generate a brief.
 2. Invokes pinned OpenOutFind against BetterContact, routing inference through the non-retrying Lovable AI proxy using `scripts/run_openoutfind.py`, with a temporary database and no email lookups.
 3. Normalizes its JSONL results to a structured Explee-compatible JSON file with lead names, companies, titles, professional profile URLs, and qualification reasons.
 4. Marks every person's employment and buyer fit as **not independently verified**.
-5. Uploads only aggregate summaries by default.
+5. Writes per-stage AI request counts and a typed QA outcome (`goal_met`, `partial` or `no_leads`) to `openoutfind-qa.json`. The HTTP gate rejects further requests locally when `qa_max_ai_calls` is reached, without spending the backend's remaining allowance. 
+6. Uploads only aggregate summaries by default, including **partial results even if the provider exits nonzero**. The GitHub job still **fails** whenever it misses the requested count, so a partial result cannot masquerade as a successful run.
 
 No emails are purchased or sent; no results are written into Supabase. This currently supports our **GitHub QA pipeline**, not an in-app OpenOutFind button.
 
 ## How to run
 
 1. Run **Explee Pipeline QA** with live_context_dev enabled to create a recent pipeline-live.json artifact.
-2. Open **Explee OpenOutFind Lead QA**, click **Run workflow**, select run_live, supply the earlier source_run_id, select campaign_index and lead_count.
-3. Inspect the job Summary and aggregate report. To inspect individual records, use private storage or explicitly opt in to a personal artifact and validate against first-party company/team pages before outreach.
+2. Open **Explee OpenOutFind Lead QA**, click **Run workflow**, select run_live, supply the earlier source_run_id, select campaign_index, lead_count and `qa_max_ai_calls` (8, 12 or 16). The cap is enforced per job attempt, not an unlimited retry allowance.
+3. Inspect the job Summary and `explee-openoutfind-summary-<runid>` artifact, which now contains `openoutfind-summary.json` and `openoutfind-qa.json` with only aggregate metrics. Inspect the `ai_requests_by_phase` counters to see whether time and credits were spent on initial searches, guesses or individual judgments. To inspect individual records, use private storage or the explicitly opt-in personal artifact and validate them against first-party company/team pages before outreach; **a public repository's Actions artifact is not private storage**.
 4. Share the GitHub Actions run link so we can assess results, fix problems, and repeat.
 
 ### Local offline checks (no provider requests)
@@ -87,4 +88,17 @@ python scripts/explee_openoutfind_bridge.py prepare --source scripts/fixtures/op
 python scripts/explee_openoutfind_bridge.py normalize --leads scripts/fixtures/openoutfind-leads.jsonl --metadata artifacts/openoutfind-fixture/campaign.json --output artifacts/openoutfind-fixture
 ~~~
 
-The fixtures are entirely **synthetic** and are not real discovered people.
+The fixtures are entirely **synthetic** and are not real discovered people. The budget and QA classifier tests use fabricated counters and stderr and never call a provider. 
+
+```powershell
+python -m unittest discover -s scripts -p 'test_explee_qa_budget.py' -v
+```
+
+### Known live observations (November 20, 2026)
+
+- Previous three-lead run (44827051870): three candidates (two complete), upstream exit 0, zero independently verified.
+- Five-lead stress run (44829308631): four complete candidates, upstream exit 1 after the old server-side 40-request cap.
+- Repeated three-lead run (44829958359): zero candidates, upstream exit 1 after 40 requests.
+- These historical results motivated the local call cap and better QA diagnostics; **they are not proof that the new capped runner has already improved actual lead relevance**. A future live run is required to measure that, and results remain unverified until source-level checking.
+
+No Explee login, frontend feature, or customer-data database has been added by this QA improvement.
