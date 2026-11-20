@@ -26,7 +26,8 @@ STAGES = (
 )
 SCHEMA = "explee.splee.qa.v1"
 MAX_RESPONSE = 2_000_000
-MAX_ITEMS = 100
+MAX_ITEMS = 1000
+PAGE_SIZE = 100
 BAD_PATH = re.compile(r"/(?:blog|article|news|resources|guide|directory)(?:/|$)", re.I)
 UNFILLED = re.compile(r"\{\{[^}]{1,70}\}\}|\[(?:first[ _-]?name|company|your[ _-]?name)\]|\blorem ipsum\b|\bTBD\b", re.I)
 DOMAIN = re.compile(r"^[a-z0-9](?:[a-z0-9.-]{0,250}[a-z0-9])?$", re.I)
@@ -141,6 +142,8 @@ def evaluate(snapshot, expected_domain="", explee=None):
             flags["missing_evidence_url"] += 1
         elif BAD_PATH.search(urlsplit(evidence).path):
             flags["unrelated_page_url"] += 1
+    if isinstance(snapshot.get("companies"), dict) and snapshot["companies"].get("truncated"):
+        flags["not_all_records_scanned"] = 1
     if any(flags.values()):
         issues.append("buyer_companies.quality_flags")
     stages["buyer_companies"] = metric_stage("review" if companies else "missing", len(companies), flags)
@@ -170,6 +173,8 @@ def evaluate(snapshot, expected_domain="", explee=None):
             if identity in people:
                 flags["duplicate_identity"] += 1
             people.add(identity)
+    if isinstance(snapshot.get("leads"), dict) and snapshot["leads"].get("truncated"):
+        flags["not_all_records_scanned"] = 1
     if any(flags.values()):
         issues.append("decision_makers.quality_flags")
     stages["decision_makers"] = metric_stage("review_unverified" if leads else "missing", len(leads), flags)
@@ -190,6 +195,8 @@ def evaluate(snapshot, expected_domain="", explee=None):
             flags["unfilled_template"] += 1
         if email.get("status") != "draft":
             flags["non_draft"] += 1
+    if isinstance(snapshot.get("emails"), dict) and snapshot["emails"].get("truncated"):
+        flags["not_all_records_scanned"] = 1
     if any(flags.values()):
         issues.append("email_drafts.quality_flags")
     stages["email_drafts"] = metric_stage("review_unsent" if emails else "missing", len(emails), flags)
@@ -199,6 +206,8 @@ def evaluate(snapshot, expected_domain="", explee=None):
     questions = research.get("questions")
     if not isinstance(questions, list):
         raise ValueError("invalid_research_grid")
+    if research.get("truncated"):
+        issues.append("company_research.research_grid_not_fully_scanned")
     project_comparison = {"available": False}
     if isinstance(explee, dict):
         explee_host = domain_of(explee.get("website"))
@@ -270,6 +279,33 @@ def get_json(opener, base, token, path):
         raise ValueError("invalid_json_response") from None
 
 
+def paginated(opener, base, token, path):
+    """Fetch up to 1,000 records, marking any larger dataset as truncated."""
+    all_rows = []
+    total = None
+    page = 1
+    while len(all_rows) < MAX_ITEMS:
+        sep = "&" if "?" in path else "?"
+        payload = get_json(opener, base, token, path + f"{sep}page={page}&per_page={PAGE_SIZE}")
+        if not isinstance(payload, dict) or not isinstance(payload.get("items"), list):
+            raise ValueError("invalid_paginated_response")
+        rows = payload["items"]
+        raw_total = payload.get("total")
+        if not isinstance(raw_total, int) or raw_total < 0 or len(rows) > PAGE_SIZE:
+            raise ValueError("invalid_paginated_response")
+        if total is None:
+            total = raw_total
+        if total != raw_total or any(not isinstance(item, dict) for item in rows):
+            raise ValueError("invalid_paginated_response")
+        all_rows.extend(rows)
+        if len(all_rows) >= total:
+            return {**payload, "items": all_rows, "total": total, "truncated": False}
+        if not rows:
+            raise ValueError("invalid_paginated_response")
+        page += 1
+    return {"items": all_rows, "total": total, "truncated": bool(total and total > len(all_rows))}
+
+
 def live_snapshot(base, token, project_id):
     pid = str(uuid.UUID(project_id))
     opener = build_opener(NoRedirects(), HTTPSHandler(context=ssl.create_default_context()))
@@ -283,11 +319,11 @@ def live_snapshot(base, token, project_id):
         "mode": "live_read_only",
         "project": project,
         "campaigns": get_json(opener, base, token, f"/api/v1/projects/{pid}/campaigns"),
-        "companies": get_json(opener, base, token, f"/api/v1/projects/{pid}/companies"),
-        "leads": get_json(opener, base, token, f"/api/v1/projects/{pid}/leads"),
-        "research": get_json(opener, base, token, f"/api/v1/projects/{pid}/research"),
+        "companies": paginated(opener, base, token, f"/api/v1/projects/{pid}/companies"),
+        "leads": paginated(opener, base, token, f"/api/v1/projects/{pid}/leads"),
+        "research": paginated(opener, base, token, f"/api/v1/projects/{pid}/research"),
         # API defaults to drafts; no emails are approved or sent.
-        "emails": get_json(opener, base, token, f"/api/v1/emails?project_id={pid}&status=draft"),
+        "emails": paginated(opener, base, token, f"/api/v1/emails?project_id={pid}&status=draft"),
     }
 
 
@@ -329,7 +365,7 @@ def main():
             "missing_project", "missing_research_grid", "invalid_research_grid", "invalid_splee_base_url",
             "invalid_api_path", "unexpected_http_status", "splee_connection_error", "response_too_large",
             "invalid_json_response", "invalid_project_list", "splee_project_not_authorized_or_missing",
-            "missing_splee_connection_settings",
+            "missing_splee_connection_settings", "invalid_paginated_response",
         } and not re.fullmatch(r"splee_http_\d{3}", safe):
             safe = "invalid_splee_qa_input"
         parser.exit(1, "Splee QA failed: " + safe + "\n")
