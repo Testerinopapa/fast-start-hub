@@ -39,12 +39,12 @@ services:
         fromService:
           type: web
           name: explee-splee-backend
-          property: url
+          envVarKey: RENDER_EXTERNAL_URL
       - key: API_URL
         fromService:
           type: web
           name: explee-splee-backend
-          property: url
+          envVarKey: RENDER_EXTERNAL_URL
       - key: GATEWAY_HOST
         fromService:
           type: pserv
