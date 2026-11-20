@@ -10,6 +10,8 @@ on:
       - 'scripts/check_lovable_proxy.py'
       - 'scripts/test_check_lovable_proxy.py'
       - 'scripts/run_openoutfind.py'
+      - 'scripts/explee_qa_report.py'
+      - 'scripts/test_explee_qa_budget.py'
       - 'supabase/functions/openoutfind-ai/**'
       - 'supabase/functions/_shared/openoutfind-ai.ts'
       - 'supabase/config.toml'
@@ -23,6 +25,8 @@ on:
       - 'scripts/check_lovable_proxy.py'
       - 'scripts/test_check_lovable_proxy.py'
       - 'scripts/run_openoutfind.py'
+      - 'scripts/explee_qa_report.py'
+      - 'scripts/test_explee_qa_budget.py'
       - 'supabase/functions/openoutfind-ai/**'
       - 'supabase/functions/_shared/openoutfind-ai.ts'
       - 'supabase/config.toml'
@@ -57,6 +61,12 @@ on:
         options: ['1', '3', '5']
         required: true
         default: '3'
+      qa_max_ai_calls:
+        description: 'Maximum provider AI requests for this QA run; separate from lead count'
+        type: choice
+        options: ['8', '12', '16']
+        required: true
+        default: '12'
       upload_leads:
         description: 'Upload personal lead records to GitHub Actions artifacts (not recommended for public repos)'
         type: boolean
@@ -86,7 +96,8 @@ jobs:
         run: |
           python -m unittest discover -s scripts -p 'test_explee_openoutfind_bridge.py' -v
           python -m unittest discover -s scripts -p 'test_check_lovable_proxy.py' -v
-          python -m py_compile scripts/run_openoutfind.py
+          python -m unittest discover -s scripts -p 'test_explee_qa_budget.py' -v
+          python -m py_compile scripts/run_openoutfind.py scripts/explee_qa_report.py scripts/explee_openoutfind_bridge.py
 
       - name: Render example using synthetic fixtures only
         run: |
@@ -97,6 +108,29 @@ jobs:
           python scripts/explee_openoutfind_bridge.py normalize \
             --leads scripts/fixtures/openoutfind-leads.jsonl \
             --metadata artifacts/example/campaign.json --output artifacts/example
+
+      - name: Smoke-test CLI QA reporting on synthetic partial results
+        run: |
+          mkdir -p artifacts/qa-smoke
+          echo 1 > artifacts/qa-smoke/exit-code.txt
+          echo '{"schema_version":"explee.openoutfind.qa-metrics.v1","max_ai_requests":8,"ai_requests_sent":8,"requests_blocked_locally":1,"local_ai_cap_hit":true,"requests_by_phase":{"lead_qualification":8}}' > artifacts/qa-smoke/metrics.json
+          echo '{"error":{"type":"goal_unreached","message":"synthetic provider details never included in report"}}' > artifacts/qa-smoke/stderr.jsonl
+          python scripts/explee_qa_report.py \
+            --summary artifacts/example/openoutfind-summary.json \
+            --metrics artifacts/qa-smoke/metrics.json \
+            --stderr artifacts/qa-smoke/stderr.jsonl \
+            --exit-code-file artifacts/qa-smoke/exit-code.txt \
+            --requested 3 \
+            --output artifacts/qa-smoke/qa.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          result = json.loads(Path("artifacts/qa-smoke/qa.json").read_text())
+          assert result["result"] == "partial"
+          assert result["reason"] == "local_ai_budget"
+          assert result["ai_requests_sent"] == 8
+          assert "synthetic provider details" not in json.dumps(result)
+          PY
 
       - name: Upload synthetic offline adapter example
         uses: actions/upload-artifact@v4
@@ -120,6 +154,7 @@ jobs:
       OPENOUTFIND_AI_MODEL: 'openai_compatible:openai/gpt-6-luna'
       OPENOUTFIND_LLM_API_BASE: ${{ vars.OPENOUTFIND_LLM_API_BASE || 'https://emlggkmtbosahpzrxaul.supabase.co/functions/v1/openoutfind-ai/v1' }}
       EXPLEE_AI_RUN_ID: github-${{ github.run_id }}-${{ github.run_attempt }}
+      EXPLEE_QA_MAX_AI_CALLS: ${{ inputs.qa_max_ai_calls || '12' }}
       OPENOUTFIND_MAX_PER_COMPANY: '2'
       # No operator identity/token: pinned upstream cannot register with the
       # maintainer's shared contacts store or contribute candidate records.
@@ -185,55 +220,9 @@ jobs:
             > "$RUNNER_TEMP/openoutfind-results.jsonl" \
             2> "$RUNNER_TEMP/openoutfind-stderr.json"
           result=$?
+          echo "$result" > "$RUNNER_TEMP/openoutfind-exit-code.txt"
           echo "OpenOutFind exited with code $result; no personal records are logged."
           exit "$result"
-
-      - name: Summarize safe provider diagnostics
-        if: always()
-        run: |
-          python - <<'PY'
-          import os
-          from pathlib import Path
-          s = (Path(os.environ["RUNNER_TEMP"]) / "openoutfind-stderr.json")
-          raw = s.read_text(encoding="utf-8", errors="replace").lower() if s.is_file() else ""
-          tokens = ["name or service not known", "temporary failure in name resolution", "getaddrinfo", "connection refused", "connection reset",
-                    "certificate verify failed", "connecterror", "dns", "timeout", "401 unauthorized", "403 forbidden",
-                    "404 not found", "429", "402 payment", "no model to write with", "no finder",
-                    "unable to connect", "llm_api_base", "bettercontact", "requesterror", "valueerror",
-                    "missing", "traceback"]
-          found = [k for k in tokens if k in raw]
-          print("Provider error indicators (not raw logs):", ", ".join(found) if found else "none")
-          print("Provider stderr bytes:", len(raw.encode("utf-8")))
-          # Restrict diagnostics to error lines; never echo provider results, PII,
-          # request bodies, or bearer credentials on the public repository.
-          cleaned = s.read_text(encoding="utf-8", errors="replace") if s.is_file() else ""
-          for key in ("OPENOUTFIND_LLM_API_KEY", "OPENOUTFIND_BETTERCONTACT_API_KEY"):
-            value = os.environ.get(key, "")
-            if value:
-              cleaned = cleaned.replace(value, "[REDACTED]")
-          patterns = ("error:", "exception:", "failed to", "caused by:", "cannot ", "could not ", "unable to ", "invalid configuration", "connection")
-          matched = []
-          for line in cleaned.splitlines():
-            if any(k in line.lower() for k in patterns):
-              words = line.strip().split()
-              safe = []
-              for word in words:
-                lower = word.lower()
-                if lower.startswith(("https://", "http://")):
-                  safe.append("[URL]")
-                elif "@" in word and "." in word:
-                  safe.append("[EMAIL]")
-                elif any(k in lower for k in ("bearer ", "sk-", "password=", "api_key=", "token=")):
-                  safe.append("[SECRET]")
-                elif len(word) > 80:
-                  safe.append("[OPAQUE]")
-                else:
-                  safe.append(word)
-              matched.append(" ".join(safe)[:220])
-          for line in matched[-8:]:
-            print("Diagnostic:", line)
-          print("Diagnostic matching lines:", len(matched))
-          PY
 
       - name: Normalize candidate leads and write aggregate summary
         if: always()
@@ -244,6 +233,21 @@ jobs:
             --leads "$RUNNER_TEMP/openoutfind-results.jsonl" \
             --metadata "$RUNNER_TEMP/openoutfind/campaign.json" \
             --output artifacts
+
+      - name: Classify outcome and request use without leaking candidate data
+        if: always()
+        id: qa
+        continue-on-error: true
+        env:
+          INPUT_LEAD_COUNT: ${{ inputs.lead_count }}
+        run: |
+          python scripts/explee_qa_report.py \
+            --summary artifacts/openoutfind-summary.json \
+            --metrics "$RUNNER_TEMP/openoutfind-metrics.json" \
+            --stderr "$RUNNER_TEMP/openoutfind-stderr.json" \
+            --exit-code-file "$RUNNER_TEMP/openoutfind-exit-code.txt" \
+            --requested "$INPUT_LEAD_COUNT" \
+            --output artifacts/openoutfind-qa.json
 
       - name: Publish aggregate results (no personal information)
         if: always()
@@ -269,13 +273,30 @@ jobs:
           else
             echo 'No normalized report; inspect setup and step outcomes.' >> "$GITHUB_STEP_SUMMARY"
           fi
+          if [ -f artifacts/openoutfind-qa.json ]; then
+            python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          q=json.load(open('artifacts/openoutfind-qa.json'))
+          print(f"- QA outcome: {q['result']} (reason: {q['reason'] or 'none'})")
+          print(f"- Requested leads: {q['requested_leads']}")
+          print(f"- Local AI call cap: {q['max_ai_requests']}")
+          print(f"- AI requests sent: {q['ai_requests_sent']}")
+          print(f"- AI requests by phase: {json.dumps(q['ai_requests_by_phase'], sort_keys=True)}")
+          print(f"- AI requests per returned candidate: {q['ai_requests_per_returned_lead']}")
+          print("- Partial results are counted as a failed goal, never as verified buyers.")
+          PY
+          else
+            echo '- QA diagnostics unavailable; inspect preceding steps.' >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Upload aggregate report only
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: explee-openoutfind-summary-${{ github.run_id }}
-          path: artifacts/openoutfind-summary.json
+          path: |
+            artifacts/openoutfind-summary.json
+            artifacts/openoutfind-qa.json
           if-no-files-found: warn
           retention-days: 14
 
@@ -293,9 +314,10 @@ jobs:
         env:
           FINDER_RESULT: ${{ steps.finder.outcome }}
           REPORT_RESULT: ${{ steps.report.outcome }}
+          QA_RESULT: ${{ steps.qa.outcome }}
         run: |
-          if [ "$FINDER_RESULT" != success ] || [ "$REPORT_RESULT" != success ]; then
-            echo "::error::OpenOutFind did not finish successfully; no verified-lead claim is made."
+          if [ "$FINDER_RESULT" != success ] || [ "$REPORT_RESULT" != success ] || [ "$QA_RESULT" != success ]; then
+            echo "::error::OpenOutFind did not meet its requested goal or QA report was unavailable; see aggregate QA summary."
             exit 1
           fi
 
