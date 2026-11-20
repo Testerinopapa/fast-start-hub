@@ -37,7 +37,7 @@ def typed_error(stderr: str) -> str | None:
             continue
         error = payload.get("error")
         label = error.get("type") if isinstance(error, dict) else None
-        if label in ERROR_TYPES:
+        if isinstance(label, str) and label in ERROR_TYPES:
             return label
     return None
 
