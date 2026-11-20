@@ -188,6 +188,53 @@ jobs:
           echo "OpenOutFind exited with code $result; no personal records are logged."
           exit "$result"
 
+      - name: Summarize safe provider diagnostics
+        if: always()
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          s = (Path(os.environ["RUNNER_TEMP"]) / "openoutfind-stderr.json")
+          raw = s.read_text(encoding="utf-8", errors="replace").lower() if s.is_file() else ""
+          tokens = ["name or service not known", "temporary failure in name resolution", "getaddrinfo", "connection refused", "connection reset",
+                    "certificate verify failed", "connecterror", "dns", "timeout", "401 unauthorized", "403 forbidden",
+                    "404 not found", "429", "402 payment", "no model to write with", "no finder",
+                    "unable to connect", "llm_api_base", "bettercontact", "requesterror", "valueerror",
+                    "missing", "traceback"]
+          found = [k for k in tokens if k in raw]
+          print("Provider error indicators (not raw logs):", ", ".join(found) if found else "none")
+          print("Provider stderr bytes:", len(raw.encode("utf-8")))
+          # Restrict diagnostics to error lines; never echo provider results, PII,
+          # request bodies, or bearer credentials on the public repository.
+          cleaned = s.read_text(encoding="utf-8", errors="replace") if s.is_file() else ""
+          for key in ("OPENOUTFIND_LLM_API_KEY", "OPENOUTFIND_BETTERCONTACT_API_KEY"):
+            value = os.environ.get(key, "")
+            if value:
+              cleaned = cleaned.replace(value, "[REDACTED]")
+          patterns = ("error:", "exception:", "failed to", "caused by:", "cannot ", "could not ", "unable to ", "invalid configuration", "connection")
+          matched = []
+          for line in cleaned.splitlines():
+            if any(k in line.lower() for k in patterns):
+              words = line.strip().split()
+              safe = []
+              for word in words:
+                lower = word.lower()
+                if lower.startswith(("https://", "http://")):
+                  safe.append("[URL]")
+                elif "@" in word and "." in word:
+                  safe.append("[EMAIL]")
+                elif any(k in lower for k in ("bearer ", "sk-", "password=", "api_key=", "token=")):
+                  safe.append("[SECRET]")
+                elif len(word) > 80:
+                  safe.append("[OPAQUE]")
+                else:
+                  safe.append(word)
+              matched.append(" ".join(safe)[:220])
+          for line in matched[-8:]:
+            print("Diagnostic:", line)
+          print("Diagnostic matching lines:", len(matched))
+          PY
+
       - name: Normalize candidate leads and write aggregate summary
         if: always()
         id: report
