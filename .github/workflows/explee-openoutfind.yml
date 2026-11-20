@@ -253,6 +253,7 @@ jobs:
           fi
 
 
+  # One-time branch-only preflight runs only on the exact commit message below.
   proxy-preflight:
     name: Lovable AI proxy no-credit connection check
     if: ${{ (github.event_name == 'workflow_dispatch' && (inputs.check_proxy == true || inputs.run_live == true)) || (github.event_name == 'push' && github.ref == 'refs/heads/test/lovable-openoutfind-live-20261120' && github.event.head_commit.message == 'verify_lovable_proxy_connection_20261120') }}
