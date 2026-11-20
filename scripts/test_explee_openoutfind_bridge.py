@@ -22,7 +22,7 @@ class BridgeTests(unittest.TestCase):
             self.assertEqual(result["campaign_name"], "Independent Consulting Practices")
             self.assertIn("Calendly", product)
             self.assertIn("consulting firm", campaign)
-            self.assertNotIn("verified buyers", campaign.lower())
+            self.assertIn("not verified buyers", campaign.lower())
 
     def test_no_silent_missing_campaign_or_made_up_profile(self):
         with tempfile.TemporaryDirectory() as temp:
