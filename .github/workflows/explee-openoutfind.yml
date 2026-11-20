@@ -2,7 +2,7 @@ name: Explee OpenOutFind Lead QA
 
 on:
   push:
-    branches: [main, 'feat/openoutfind-*', 'ci/explee-lovable-correct-url-live-20261120']
+    branches: [main, 'feat/openoutfind-*']
     paths:
       - '.github/workflows/explee-openoutfind.yml'
       - 'scripts/explee_openoutfind_bridge.py'
@@ -107,8 +107,8 @@ jobs:
 
   live:
     name: Optional OpenOutFind live lead qualification — no email lookup
-    if: ${{ (github.event_name == 'workflow_dispatch' && inputs.run_live == true) || (github.event_name == 'push' && github.ref == 'refs/heads/ci/explee-lovable-correct-url-live-20261120' && github.event.head_commit.message == 'run_calendly_lovable_live_correct_url_once_20261120') }}
-    needs: adapter-tests
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_live == true }}
+    needs: [adapter-tests, proxy-preflight]
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -139,7 +139,7 @@ jobs:
 
       - name: Verify manual source and credentials
         env:
-          SOURCE_RUN_ID: ${{ inputs.source_run_id || '44815551658' }}
+          SOURCE_RUN_ID: ${{ inputs.source_run_id }}
         run: |
           if ! [[ "$SOURCE_RUN_ID" =~ ^[0-9]+$ ]]; then
             echo "::error::Provide the run ID of a completed Explee Pipeline QA live smoke."
@@ -153,15 +153,15 @@ jobs:
       - name: Download saved Explee live research
         uses: actions/download-artifact@v4
         with:
-          run-id: ${{ inputs.source_run_id || '44815551658' }}
-          pattern: explee-live-qa-${{ inputs.source_run_id || '44815551658' }}-*
+          run-id: ${{ inputs.source_run_id }}
+          pattern: explee-live-qa-${{ inputs.source_run_id }}-*
           merge-multiple: true
           path: source-report/
           github-token: ${{ github.token }}
 
       - name: Build product brief and target from Explee campaign
         env:
-          INPUT_CAMPAIGN_INDEX: ${{ inputs.campaign_index || '0' }}
+          INPUT_CAMPAIGN_INDEX: ${{ inputs.campaign_index }}
         run: |
           python scripts/explee_openoutfind_bridge.py prepare \
             --source source-report/pipeline-live.json \
@@ -172,7 +172,7 @@ jobs:
         id: finder
         continue-on-error: true
         env:
-          INPUT_LEAD_COUNT: ${{ inputs.lead_count || '3' }}
+          INPUT_LEAD_COUNT: ${{ inputs.lead_count }}
         run: |
           # Isolated DB; never pass "emails" or "--emails".
           export OPENOUTFIND_PRODUCT_DOCS="$(cat "$RUNNER_TEMP/openoutfind/product.md")"
