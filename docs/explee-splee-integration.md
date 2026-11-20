@@ -38,7 +38,7 @@ In Explee's GitHub repository:
 
 Run: **Actions → Explee Splee Six-Stage QA → Run workflow → run_live=true**.
 
-The live job makes only **six HTTPS GET calls** under Splee API v1:
+The live job accesses **six read-only API endpoint categories** under Splee API v1 (more than six HTTP GETs when pagination is necessary). It reads up to 1,000 companies, 1,000 people, 1,000 email drafts and 1,000 research rows; larger datasets are explicitly flagged as not fully scanned:
 
 1. `GET /api/v1/projects` (ensures selected project belongs to the API-key organization and reads saved company metadata).
 2. `GET /api/v1/projects/{id}/campaigns`.
@@ -47,7 +47,7 @@ The live job makes only **six HTTPS GET calls** under Splee API v1:
 5. `GET /api/v1/projects/{id}/research` (company Q&A grid, not full fact verification).
 6. `GET /api/v1/emails?project_id={id}&status=draft` (drafts only).
 
-**It never invokes project research creation, discovery writes, email drafting, approval, campaign launch, or sending endpoints.** It never exports individual lead records, names, emails or content. The aggregate report `splee-live-qa.json` contains counts, missing-field/duplicate/template flags and safe status codes only.
+**It never invokes project research creation, discovery writes, email drafting, approval, campaign launch, or sending endpoints.** It never exports individual lead records, names, emails or content. The aggregate report `splee-live-qa.json` contains counts, missing-field/duplicate/template flags and safe status codes only. Paginated results are fetched in pages of 100 with an upper bound of 1,000 records per category.
 
 Splee's project competitor route is exposed to its browser session rather than its API-key v1 surface, so we explicitly report `competitor_research: not_exposed_by_api_v1`. Do not imply this step passed. A later Splee-owned API enhancement or permissioned sidecar is needed to inspect competitor output without a browser login.
 
