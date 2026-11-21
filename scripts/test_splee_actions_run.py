@@ -97,11 +97,24 @@ class EphemeralRunnerTests(unittest.TestCase):
         with patch.object(qa, "request_json",side_effect=[
             {"ok":True}, {}, {"secret":"key"}, [], {"id":"11111111-1111-4111-8111-111111111111"}
         ]), patch.object(qa,"wait_for_run",return_value=("failed",2)), \
+             patch.object(qa,"safe_agent_diagnostic",return_value="ai_request_rejected"), \
              patch.object(qa,"live_snapshot",side_effect=ValueError("private source content")):
             result=qa.run("research","calendly.com",20)
         self.assertEqual(result["status"],"failed")
+        self.assertEqual(result["agent_error_category"],"ai_request_rejected")
         self.assertEqual(result["diagnostic"],"read_only_quality_snapshot_unavailable")
         self.assertNotIn("private source content",json.dumps(result))
+
+    def test_agent_error_is_classified_without_copying_raw_provider_text(self):
+        self.assertEqual(
+            qa.classify_agent_error("429 private credential = SECRET"),
+            "ai_rate_or_budget_limit",
+        )
+        self.assertEqual(
+            qa.classify_agent_error("WebFetch unsupported: private URL"),
+            "web_tool_protocol_incompatibility",
+        )
+        self.assertEqual(qa.classify_agent_error(""), "agent_error_not_reported")
 
     def test_workflow_keeps_sending_off_and_research_manual(self):
         workflow = (BASE.parent / ".github/workflows/splee-actions-ephemeral.yml").read_text()
