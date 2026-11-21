@@ -1,0 +1,49 @@
+name: Splee Direct AI Overlay Compile
+
+on:
+  push:
+    branches: ['qa/splee-direct-ai-20261120']
+    paths:
+      - '.github/workflows/splee-direct-build.yml'
+      - 'scripts/patch_splee_direct_ai.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  rust-build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      CARGO_BUILD_JOBS: '2'
+      CARGO_PROFILE_DEV_DEBUG: '0'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: Iweisc/splee
+          ref: 3c2b1723bc9651a2cd2872ae6a3b4939501c8435
+          path: splee-upstream
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Apply non-vendored Rust transport overlay
+        run: python scripts/patch_splee_direct_ai.py splee-upstream/backend/src/agent/sdk.rs
+      - name: Install pinned Rust
+        run: |
+          rustup toolchain install 1.93.0 --profile minimal
+          rustup default 1.93.0
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: splee-upstream/backend -> target
+          key: splee-3c2b1723-qa-debug
+      - name: Compile actual Splee server with direct transport
+        working-directory: splee-upstream/backend
+        run: cargo build --locked --bin splee
+      - name: State compile-only scope
+        if: always()
+        run: echo 'Build-only test; no live AI inference, data fetching, or email delivery.' >> "$GITHUB_STEP_SUMMARY"
