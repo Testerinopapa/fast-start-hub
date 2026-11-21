@@ -1,9 +1,6 @@
 name: One-time Splee Model Protocol QA
 on:
   workflow_dispatch:
-  push:
-    branches: ['qa/splee-model-probe-20261120']
-    paths: ['.github/workflows/splee-model-probe.yml']
 permissions:
   contents: read
 jobs:
