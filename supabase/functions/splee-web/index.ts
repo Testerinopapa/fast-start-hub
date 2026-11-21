@@ -108,7 +108,7 @@ if (import.meta.main) {
       const page = await contextScrape(url, { schema: {
         type: 'object', properties: { summary: { type: 'string' } }, required: ['summary'],
       } }, { retries: 0 });
-      return { url: page.metadata.url, title: page.metadata.title || '', markdown: (page.markdown || '').slice(0, 10000) };
+      return { url: page.metadata?.url || url, title: page.metadata?.title || '', markdown: (page.markdown || '').slice(0, 10000) };
     },
   }));
 }
