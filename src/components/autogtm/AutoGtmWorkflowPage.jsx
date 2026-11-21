@@ -26,6 +26,7 @@ import usePeopleDiscovery from '../../hooks/usePeopleDiscovery';
 import { campaignSegments } from '../../lib/campaigns';
 import CampaignEditor from './CampaignEditor';
 import ProjectJsonExport from './ProjectJsonExport';
+import SixStageWorkflow from './SixStageWorkflow';
 
 const PHASES = [
   'research_company_loading',
@@ -43,7 +44,12 @@ const PHASES = [
   'final',
 ];
 
-export default function AutoGtmWorkflowPage({ domain = 'keethub.lovable.app' }) {
+export default function AutoGtmWorkflowPage(props) {
+  return new URLSearchParams(window.location.search).get('cloud') === '1'
+    ? <SixStageWorkflow {...props} /> : <LegacyAutoGtmWorkflow {...props} />;
+}
+
+function LegacyAutoGtmWorkflow({ domain = 'keethub.lovable.app' }) {
   const { navigate } = useNavigation();
   const { data: research, error: researchError, retry: retryResearch, session } = useCompanyResearch(domain);
   const researchReady = research?.job.status === 'completed' && Boolean(research?.profile) && !researchError;

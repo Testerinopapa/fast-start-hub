@@ -1,6 +1,6 @@
 import React from 'react';
 
-export default function Step1CompanyCard({ company, onNext }) {
+export default function Step1CompanyCard({ company, onNext, evidenceStatus = 'Found' }) {
   const name = company?.name || 'PrimKeet';
   const domain = company?.domain || 'keethub.lovable.app';
   const description =
@@ -38,7 +38,7 @@ export default function Step1CompanyCard({ company, onNext }) {
           >
             <polyline points="20 6 9 17 4 12"></polyline>
           </svg>
-          <span>Found</span>
+          <span>{evidenceStatus}</span>
         </div>
       </div>
 

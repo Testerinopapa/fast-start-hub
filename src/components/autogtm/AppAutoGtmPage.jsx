@@ -3,8 +3,8 @@ import { useNavigation } from '../../context/NavigationContext';
 import AutoGtmNavigation from './AutoGtmNavigation';
 import CrispChatWidget from './CrispChatWidget';
 import useAuthSession from '../../hooks/useAuthSession';
-import { ensureGuestSession } from '../../lib/guestSession';
 import { normalizeWebsite, requestedWebsite } from '../../lib/companyResearch';
+import { startSixStageResearch, sixStagePath } from '../../lib/sixStageResearch';
 
 export default function AppAutoGtmPage() {
   const { navigate } = useNavigation();
@@ -20,9 +20,9 @@ export default function AppAutoGtmPage() {
       const normalized = normalizeWebsite(domain);
       sessionStorage.setItem('autogtm-pending-domain', normalized.website);
       setStarting(true);
-      await ensureGuestSession();
-      // Open the original animation immediately; its data hook starts the job.
-      navigate(`/auto-gtm/company/${encodeURIComponent(normalized.domain)}/explore?src=cabinet&phase=research_company_loading`);
+      if (!session) { navigate('/sign-in'); return; }
+      const result = await startSixStageResearch(normalized.website);
+      navigate(sixStagePath(normalized.domain, result.job.id));
     } catch (err) { setError(err.message); }
     finally { setStarting(false); }
   };
@@ -179,10 +179,10 @@ export default function AppAutoGtmPage() {
               </span>
               <div className="min-w-0">
                 <div className="text-xs font-semibold text-gray-900 leading-tight">
-                  We reach out for you
+                  We draft your outreach
                 </div>
                 <div className="mt-0.5 text-xs text-gray-500 leading-relaxed">
-                  Personalized emails to the right people, sent for you.
+                  Personalized email drafts grounded in saved research. No sending.
                 </div>
               </div>
             </div>

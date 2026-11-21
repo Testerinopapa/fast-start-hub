@@ -23,3 +23,11 @@
 - Keep OpenOutFind's pinned discovery package and no-email/no-shared-store workflow safeguards; only the LLM transport changes.
 - Use mocked transport for automatic regression tests; live provider checks remain an explicit manual workflow choice to prevent accidental spend.
 - Deployment and migration notes: `docs/context-dev-migration.md`. Company news and identity enrichment endpoints are not enabled; people discovery uses public-page search and evidence-based extraction.
+
+## Managed six-stage research
+
+- New manually started research uses `splee-research` and owner-scoped `splee_research_jobs`; retain legacy endpoints/screens for old links, because the existing external research data is not migrated.
+- Persist and atomically claim one source/AI operation per advance; consume interrupted operations and never replay ambiguous billable work, because refreshes and concurrent tabs must not multiply spending.
+- Reuse Context.dev extraction schemas and existing evidence/fit validators; only verified, plausible businesses feed publicly documented senior roles, because search snippets are not verified leads.
+- Render new job results through the existing six output components and draft-only composer on the same project route; no auth-setting changes, because deployment must preserve login and routes.
+- Verify new research sessions against managed auth first and the existing trusted legacy issuer server-side as a fallback; namespace legacy owners by issuer+verified subject, because old sign-ins must work without changing auth settings or conflating accounts.

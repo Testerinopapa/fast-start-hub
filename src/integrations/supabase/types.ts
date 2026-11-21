@@ -278,6 +278,51 @@ export type Database = {
         }
         Relationships: []
       }
+      splee_research_jobs: {
+        Row: {
+          ai_requests: number
+          claim_id: string | null
+          created_at: string
+          domain: string
+          id: string
+          owner_id: string
+          request_id: string
+          revision: number
+          state: Json
+          updated_at: string
+          website_url: string
+          working: boolean
+        }
+        Insert: {
+          ai_requests?: number
+          claim_id?: string | null
+          created_at?: string
+          domain: string
+          id?: string
+          owner_id: string
+          request_id: string
+          revision?: number
+          state?: Json
+          updated_at?: string
+          website_url: string
+          working?: boolean
+        }
+        Update: {
+          ai_requests?: number
+          claim_id?: string | null
+          created_at?: string
+          domain?: string
+          id?: string
+          owner_id?: string
+          request_id?: string
+          revision?: number
+          state?: Json
+          updated_at?: string
+          website_url?: string
+          working?: boolean
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -290,6 +335,33 @@ export type Database = {
       openoutfind_ai_stop: {
         Args: { p_pause_all: boolean; p_run_id: string }
         Returns: undefined
+      }
+      splee_ai_admit: {
+        Args: { p_job: string; p_owner: string }
+        Returns: string
+      }
+      splee_claim: {
+        Args: {
+          p_job: string
+          p_owner: string
+          p_revision: number
+          p_state: Json
+        }
+        Returns: Json
+      }
+      splee_finish: {
+        Args: { p_claim: string; p_job: string; p_owner: string; p_state: Json }
+        Returns: Json
+      }
+      splee_start: {
+        Args: {
+          p_domain: string
+          p_owner: string
+          p_request: string
+          p_state: Json
+          p_url: string
+        }
+        Returns: Json
       }
     }
     Enums: {
