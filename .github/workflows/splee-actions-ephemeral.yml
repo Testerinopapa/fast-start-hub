@@ -15,7 +15,7 @@ on:
         required: true
         default: 'calendly.com'
   push:
-    branches: ['feat/splee-actions-*', 'qa/splee-calendly-research-20261120']
+    branches: ['feat/splee-actions-*']
     paths:
       - '.github/workflows/splee-actions-ephemeral.yml'
       - 'scripts/splee_actions_run.py'
@@ -27,7 +27,7 @@ permissions:
 
 concurrency:
   group: splee-ephemeral-${{ github.ref }}-${{ github.event_name }}
-  cancel-in-progress: ${{ github.event_name == 'push' && github.ref_name != 'qa/splee-calendly-research-20261120' }}
+  cancel-in-progress: ${{ github.event_name == 'push' }}
 
 jobs:
   temporary-splee:
@@ -52,7 +52,7 @@ jobs:
           --health-timeout 5s
           --health-retries 12
     env:
-      RUN_MODE: ${{ github.event_name == 'workflow_dispatch' && inputs.mode || (github.event_name == 'push' && github.ref_name == 'qa/splee-calendly-research-20261120' && 'research' || 'smoke') }}
+      RUN_MODE: ${{ github.event_name == 'workflow_dispatch' && inputs.mode || 'smoke' }}
       DOMAIN: ${{ github.event_name == 'workflow_dispatch' && inputs.domain || 'calendly.com' }}
       DATABASE_URL: postgres://splee_ci:local_ci_password_only@127.0.0.1:5432/splee_test
       PUBLIC_URL: http://127.0.0.1:8787
@@ -65,7 +65,7 @@ jobs:
       CARGO_BUILD_JOBS: '2'
       CARGO_PROFILE_DEV_DEBUG: '0'
       RUST_LOG: 'splee=warn'
-      OPENOUTFIND_LLM_API_KEY: ${{ (github.event_name == 'workflow_dispatch' && inputs.mode == 'research' || github.event_name == 'push' && github.ref_name == 'qa/splee-calendly-research-20261120') && secrets.OPENOUTFIND_LLM_API_KEY || '' }}
+      OPENOUTFIND_LLM_API_KEY: ${{ github.event_name == 'workflow_dispatch' && inputs.mode == 'research' && secrets.OPENOUTFIND_LLM_API_KEY || '' }}
       OPENOUTFIND_AI_API_BASE: ${{ vars.OPENOUTFIND_AI_API_BASE || 'https://emlggkmtbosahpzrxaul.supabase.co/functions/v1/openoutfind-ai/v1' }}
       EXPLEE_AI_RUN_ID: github-${{ github.run_id }}-${{ github.run_attempt }}
       LITELLM_USE_CHAT_COMPLETIONS_URL_FOR_ANTHROPIC_MESSAGES: 'true'
