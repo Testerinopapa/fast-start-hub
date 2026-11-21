@@ -1,10 +1,6 @@
 name: Splee Evidence Gateway Deploy Attempt
 
 on:
-  push:
-    branches: ['qa/splee-direct-ai-20261120']
-    paths:
-      - '.github/workflows/splee-web-deploy.yml'
   workflow_dispatch:
 
 permissions:
