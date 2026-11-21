@@ -1,0 +1,41 @@
+name: Splee Evidence Gateway Deployment Preflight
+
+on:
+  push:
+    branches: ['qa/splee-direct-ai-20261120']
+    paths:
+      - '.github/workflows/splee-web-preflight.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  endpoint:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    env:
+      SPLEE_DIRECT_WEB_API_BASE: ${{ vars.SPLEE_DIRECT_WEB_API_BASE || 'https://emlggkmtbosahpzrxaul.supabase.co/functions/v1/splee-web/v1' }}
+      OPENOUTFIND_LLM_API_KEY: ${{ secrets.OPENOUTFIND_LLM_API_KEY }}
+    steps:
+      - name: Verify evidence deployment and bearer authentication without any paid calls
+        run: |
+          case "$SPLEE_DIRECT_WEB_API_BASE" in
+            https://emlggkmtbosahpzrxaul.supabase.co/functions/v1/splee-web/v1) ;;
+            *) echo "::error::Unexpected evidence endpoint; refusing to send a token."; exit 1 ;;
+          esac
+          if [ -z "$OPENOUTFIND_LLM_API_KEY" ]; then
+            echo "::error::Direct AI repository secret not configured"; exit 1
+          fi
+          code=$(curl --silent --show-error --max-time 15 -o /dev/null -w '%{http_code}' \
+            -X POST "${SPLEE_DIRECT_WEB_API_BASE%/}/web/search" \
+            -H "Authorization: Bearer $OPENOUTFIND_LLM_API_KEY" \
+            -H 'x-explee-run-id: invalid-preflight-id' \
+            -H 'Content-Type: application/json' \
+            --data '{"query":"public source preflight"}' || true)
+          echo "Splee source endpoint preflight HTTP $code"
+          if [ "$code" != '400' ]; then
+            echo "::error::Evidence function is not deployed or uses a different token; no AI or search requests were made"
+            exit 1
+          fi
+          echo 'Source backend deployed and token accepted; malformed run ID blocked as expected.'
