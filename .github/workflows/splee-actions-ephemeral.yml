@@ -65,6 +65,7 @@ jobs:
       SPLEE_AI_TRANSPORT: direct
       SPLEE_DIRECT_WEB_BACKEND: explee-context
       SPLEE_DIRECT_AI_API_BASE: ${{ vars.OPENOUTFIND_AI_API_BASE || 'https://emlggkmtbosahpzrxaul.supabase.co/functions/v1/openoutfind-ai/v1' }}
+      SPLEE_DIRECT_WEB_API_BASE: ${{ vars.SPLEE_DIRECT_WEB_API_BASE || 'https://emlggkmtbosahpzrxaul.supabase.co/functions/v1/splee-web/v1' }}
       CARGO_BUILD_JOBS: '2'
       CARGO_PROFILE_DEV_DEBUG: '0'
       RUST_LOG: 'splee=warn'
