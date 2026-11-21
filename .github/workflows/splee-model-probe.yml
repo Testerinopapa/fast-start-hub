@@ -1,0 +1,84 @@
+name: One-time Splee Model Protocol QA
+on:
+  push:
+    branches: ['qa/splee-model-probe-20261120']
+    paths: ['.github/workflows/splee-model-probe.yml']
+permissions:
+  contents: read
+jobs:
+  two-call-probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 9
+    env:
+      OPENOUTFIND_LLM_API_KEY: ${{ secrets.OPENOUTFIND_LLM_API_KEY }}
+      OPENOUTFIND_AI_API_BASE: ${{ vars.OPENOUTFIND_AI_API_BASE || 'https://emlggkmtbosahpzrxaul.supabase.co/functions/v1/openoutfind-ai/v1' }}
+      EXPLEE_AI_RUN_ID: github-${{ github.run_id }}-${{ github.run_attempt }}
+      ROUNDTRIP_REPORT_PATH: artifacts/splee-model-roundtrip.json
+      LITELLM_USE_CHAT_COMPLETIONS_URL_FOR_ANTHROPIC_MESSAGES: 'true'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Check real model connection safely
+        run: |
+          if [ -z "$OPENOUTFIND_LLM_API_KEY" ]; then
+            echo "::error::No authorized OPENOUTFIND_LLM_API_KEY secret configured."
+            exit 1
+          fi
+          gateway_key="sk-$(openssl rand -hex 32)"
+          echo "::add-mask::$gateway_key"
+          echo "LITELLM_MASTER_KEY=$gateway_key" >> "$GITHUB_ENV"
+          python -m pip install --disable-pip-version-check -q 'litellm[proxy]==1.110.2'
+      - name: Start isolated Anthropic-compatible model bridge
+        run: |
+          env -u DATABASE_URL litellm --config deploy/splee/actions/litellm.yaml --host 127.0.0.1 --port 4000 > "$RUNNER_TEMP/bridge-probe.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/bridge-probe.pid"
+          for i in $(seq 1 30); do
+            if curl -fsS --max-time 2 -H "Authorization: Bearer $LITELLM_MASTER_KEY" http://127.0.0.1:4000/v1/models >/dev/null 2>&1; then exit 0; fi
+            sleep 2
+          done
+          echo "::error::Local LiteLLM gateway unavailable. No model calls made."
+          exit 1
+      - name: Execute at most two small provider requests (one per protocol)
+        id: probe
+        continue-on-error: true
+        run: python scripts/splee_model_roundtrip.py
+      - name: Publish safe protocol status only
+        if: always()
+        run: |
+          if [ -f artifacts/splee-model-roundtrip.json ]; then
+            python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          d=json.load(open('artifacts/splee-model-roundtrip.json'))
+          print('## Splee model protocol test')
+          print('- Outcome: '+str(d.get('result')))
+          for x in ('direct_openai','anthropic_via_litellm'):
+              if x in d: print(f"- {x}: HTTP {d[x].get('status')}; code {d[x].get('error_code','none')}")
+          print('- No prompts, model responses or personal data are uploaded.')
+          PY
+          fi
+      - name: Upload aggregate-only status
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: splee-model-probe-${{ github.run_id }}
+          path: artifacts/splee-model-roundtrip.json
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Stop temporary gateway
+        if: always()
+        run: |
+          if [ -f "$RUNNER_TEMP/bridge-probe.pid" ]; then kill "$(cat "$RUNNER_TEMP/bridge-probe.pid")" 2>/dev/null || true; fi
+          rm -f "$RUNNER_TEMP/bridge-probe.log"
+      - name: Fail if protocol bridge failed
+        if: always()
+        env:
+          OUTCOME: ${{ steps.probe.outcome }}
+        run: |
+          if [ "$OUTCOME" != success ]; then
+            echo "::error::Splee model bridge protocol QA failed; inspect aggregate artifact."
+            exit 1
+          fi
