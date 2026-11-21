@@ -1,10 +1,10 @@
-name: Splee Ephemeral GitHub Actions Pipeline
+name: Splee Ephemeral Direct AI Pipeline
 
 on:
   workflow_dispatch:
     inputs:
       mode:
-        description: 'Smoke checks only, or opt in to real Splee six-stage research with Lovable AI credits'
+        description: 'Smoke checks or manually authorized six-stage research using direct Lovable AI and Context.dev evidence'
         type: choice
         options: ['smoke', 'research']
         required: true
@@ -31,7 +31,7 @@ concurrency:
 
 jobs:
   temporary-splee:
-    name: Splee source build + temporary Postgres + local QA
+    name: Splee direct AI source overlay + temporary Postgres + local QA
     # Never run real AI research on a branch push or pull request.
     # Public test artifacts always contain aggregate counts only.
     if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'push' }}
@@ -61,16 +61,16 @@ jobs:
       PUBLIC_AGENT: 'false'
       OPEN_SIGNUP: 'false'
       AGENT_CONCURRENCY: '1'
-      AGENT_MODEL: claude-sonnet-5-5
+      AGENT_MODEL: openai/gpt-6-luna
+      SPLEE_AI_TRANSPORT: direct
+      SPLEE_DIRECT_WEB_BACKEND: explee-context
+      SPLEE_DIRECT_AI_API_BASE: ${{ vars.OPENOUTFIND_AI_API_BASE || 'https://emlggkmtbosahpzrxaul.supabase.co/functions/v1/openoutfind-ai/v1' }}
       CARGO_BUILD_JOBS: '2'
       CARGO_PROFILE_DEV_DEBUG: '0'
       RUST_LOG: 'splee=warn'
       OPENOUTFIND_LLM_API_KEY: ${{ github.event_name == 'workflow_dispatch' && inputs.mode == 'research' && secrets.OPENOUTFIND_LLM_API_KEY || '' }}
       OPENOUTFIND_AI_API_BASE: ${{ vars.OPENOUTFIND_AI_API_BASE || 'https://emlggkmtbosahpzrxaul.supabase.co/functions/v1/openoutfind-ai/v1' }}
       EXPLEE_AI_RUN_ID: github-${{ github.run_id }}-${{ github.run_attempt }}
-      LITELLM_USE_CHAT_COMPLETIONS_URL_FOR_ANTHROPIC_MESSAGES: 'true'
-      DISABLE_AUTOUPDATER: '1'
-      CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1'
 
     steps:
       - uses: actions/checkout@v4
@@ -93,6 +93,11 @@ jobs:
         run: |
           python -m unittest discover -s scripts -p 'test_splee_actions_run.py' -v
           python -m py_compile scripts/splee_actions_run.py scripts/splee_pipeline_qa.py
+
+      - name: Overlay pinned upstream AI transport (no Claude CLI)
+        run: |
+          python scripts/patch_splee_direct_ai.py splee-upstream/backend/src/agent/sdk.rs
+          python -m py_compile scripts/patch_splee_direct_ai.py scripts/splee_direct_schema_probe.py
 
       - name: Install pinned Rust toolchain
         run: |
@@ -125,37 +130,9 @@ jobs:
             *) echo "::error::Configure a secure Explee OpenOutFind AI proxy base URL"; exit 1 ;;
           esac
 
-      - name: Install Claude CLI and local LiteLLM adapter (research mode only)
-        if: ${{ env.RUN_MODE == 'research' }}
-        run: |
-          npm install --global @anthropic-ai/claude-code@2.1.329
-          python -m pip install --disable-pip-version-check 'litellm[proxy]==1.110.2'
-          gateway_key="sk-$(openssl rand -hex 32)"
-          echo "::add-mask::$gateway_key"
-          echo "LITELLM_MASTER_KEY=$gateway_key" >> "$GITHUB_ENV"
-
-      - name: Start local LiteLLM to existing capped Lovable AI proxy
-        if: ${{ env.RUN_MODE == 'research' }}
-        run: |
-          env -u DATABASE_URL litellm --config deploy/splee/actions/litellm.yaml --host 127.0.0.1 --port 4000 \
-            > "$RUNNER_TEMP/splee-litellm.log" 2>&1 &
-          echo "$!" > "$RUNNER_TEMP/splee-litellm.pid"
-          for n in $(seq 1 35); do
-            if curl -fsS --max-time 2 -H "Authorization: Bearer $LITELLM_MASTER_KEY" \
-              http://127.0.0.1:4000/v1/models >/dev/null 2>&1; then exit 0; fi
-            sleep 2
-          done
-          echo "::error::Local LiteLLM gateway did not start. No paid inference was initiated."
-          exit 1
-
       - name: Start Splee backend and apply its real SQL migrations
         working-directory: splee-upstream/backend
         run: |
-          if [ "$RUN_MODE" = research ]; then
-            export ANTHROPIC_BASE_URL=http://127.0.0.1:4000
-            export ANTHROPIC_AUTH_TOKEN="$LITELLM_MASTER_KEY"
-            unset ANTHROPIC_API_KEY || true
-          fi
           ./target/debug/splee > "$RUNNER_TEMP/splee-server.log" 2>&1 &
           echo "$!" > "$RUNNER_TEMP/splee-server.pid"
           for n in $(seq 1 70); do
@@ -191,7 +168,7 @@ jobs:
             echo '- The actual pinned Rust server and migrations run in this GitHub runner only.'
             echo '- PostgreSQL is deleted with the runner; no persistent server, Render bill or mailboxes.'
             echo '- Sending and public agents were disabled; no outreach was authorized.'
-            echo '- Splee source stays AGPL-3.0; no upstream implementation was copied into Explee.'
+            echo '- Splee stays AGPL-3.0; the runner overlays a direct AI transport on the pinned upstream source.'
             echo '- Data-quality acceptance needs evidence review; a healthy API alone does not prove accurate leads.'
           } >> "$GITHUB_STEP_SUMMARY"
           if [ -f artifacts/splee-actions-summary.json ]; then
@@ -219,12 +196,12 @@ jobs:
       - name: Stop local processes and remove temporary credentials
         if: always()
         run: |
-          for kind in splee-server splee-litellm; do
+          for kind in splee-server; do
             if [ -f "$RUNNER_TEMP/$kind.pid" ]; then
               kill "$(cat "$RUNNER_TEMP/$kind.pid")" 2>/dev/null || true
             fi
           done
-          rm -f "$RUNNER_TEMP/splee-server.log" "$RUNNER_TEMP/splee-litellm.log"
+          rm -f "$RUNNER_TEMP/splee-server.log"
           echo "Temporary services stopped; the GitHub-hosted database is ephemeral."
 
       - name: Enforce QA result
