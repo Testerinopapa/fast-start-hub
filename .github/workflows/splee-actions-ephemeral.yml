@@ -1,0 +1,236 @@
+name: Splee Ephemeral GitHub Actions Pipeline
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Smoke checks only, or opt in to real Splee six-stage research with Lovable AI credits'
+        type: choice
+        options: ['smoke', 'research']
+        required: true
+        default: 'smoke'
+      domain:
+        description: 'Public company domain for manual research only'
+        type: string
+        required: true
+        default: 'calendly.com'
+  push:
+    branches: ['feat/splee-actions-*']
+    paths:
+      - '.github/workflows/splee-actions-ephemeral.yml'
+      - 'scripts/splee_actions_run.py'
+      - 'scripts/test_splee_actions_run.py'
+      - 'deploy/splee/actions/**'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: splee-ephemeral-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: ${{ github.event_name == 'push' }}
+
+jobs:
+  temporary-splee:
+    name: Splee source build + temporary Postgres + local QA
+    # Never run real AI research on a branch push or pull request.
+    # Public test artifacts always contain aggregate counts only.
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'push' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 55
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: splee_test
+          POSTGRES_USER: splee_ci
+          POSTGRES_PASSWORD: local_ci_password_only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U splee_ci -d splee_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      RUN_MODE: ${{ github.event_name == 'workflow_dispatch' && inputs.mode || 'smoke' }}
+      DOMAIN: ${{ github.event_name == 'workflow_dispatch' && inputs.domain || 'calendly.com' }}
+      DATABASE_URL: postgres://splee_ci:local_ci_password_only@127.0.0.1:5432/splee_test
+      PUBLIC_URL: http://127.0.0.1:8787
+      BIND_ADDR: 127.0.0.1:8787
+      SENDING_ENABLED: 'false'
+      PUBLIC_AGENT: 'false'
+      OPEN_SIGNUP: 'false'
+      AGENT_CONCURRENCY: '1'
+      AGENT_MODEL: claude-sonnet-5-5
+      CARGO_BUILD_JOBS: '2'
+      CARGO_PROFILE_DEV_DEBUG: '0'
+      RUST_LOG: 'splee=warn'
+      OPENOUTFIND_LLM_API_KEY: ${{ github.event_name == 'workflow_dispatch' && inputs.mode == 'research' && secrets.OPENOUTFIND_LLM_API_KEY || '' }}
+      OPENOUTFIND_AI_API_BASE: ${{ vars.OPENOUTFIND_AI_API_BASE || 'https://emlggkmtbosahpzrxaul.supabase.co/functions/v1/openoutfind-ai/v1' }}
+      EXPLEE_AI_RUN_ID: github-${{ github.run_id }}-${{ github.run_attempt }}
+      LITELLM_USE_CHAT_COMPLETIONS_URL_FOR_ANTHROPIC_MESSAGES: 'true'
+      DISABLE_AUTOUPDATER: '1'
+      CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1'
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Check out exact AGPL Splee source commit
+        uses: actions/checkout@v4
+        with:
+          repository: Iweisc/splee
+          ref: 3c2b1723bc9651a2cd2872ae6a3b4939501c8435
+          path: splee-upstream
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Validate no-sending and read-only report behavior
+        run: |
+          python -m unittest discover -s scripts -p 'test_splee_actions_run.py' -v
+          python -m py_compile scripts/splee_actions_run.py scripts/splee_pipeline_qa.py
+
+      - name: Install pinned Rust toolchain
+        run: |
+          rustup toolchain install 1.93.0 --profile minimal
+          rustup default 1.93.0
+          rustc --version
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: splee-upstream/backend -> target
+          key: splee-3c2b1723-qa-debug
+
+      - name: Build actual Splee Rust binary
+        working-directory: splee-upstream/backend
+        run: cargo build --locked --bin splee
+
+      - name: Prepare local isolated application secret
+        run: |
+          echo "APP_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+
+      - name: Ensure real AI research is manually authorized
+        if: ${{ env.RUN_MODE == 'research' }}
+        run: |
+          if [ -z "$OPENOUTFIND_LLM_API_KEY" ]; then
+            echo "::error::Set repository secret OPENOUTFIND_LLM_API_KEY for manual Lovable AI research."
+            exit 1
+          fi
+          case "$OPENOUTFIND_AI_API_BASE" in
+            https://*/functions/v1/openoutfind-ai/v1) ;;
+            *) echo "::error::Configure a secure Explee OpenOutFind AI proxy base URL"; exit 1 ;;
+          esac
+
+      - name: Install Claude CLI and local LiteLLM adapter (research mode only)
+        if: ${{ env.RUN_MODE == 'research' }}
+        run: |
+          npm install --global @anthropic-ai/claude-code@2.1.329
+          python -m pip install --disable-pip-version-check 'litellm[proxy]==1.110.2'
+          echo "LITELLM_MASTER_KEY=sk-$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+
+      - name: Start local LiteLLM to existing capped Lovable AI proxy
+        if: ${{ env.RUN_MODE == 'research' }}
+        run: |
+          litellm --config deploy/splee/actions/litellm.yaml --host 127.0.0.1 --port 4000 \
+            > "$RUNNER_TEMP/splee-litellm.log" 2>&1 &
+          echo "$!" > "$RUNNER_TEMP/splee-litellm.pid"
+          for n in $(seq 1 35); do
+            if curl -fsS --max-time 2 -H "Authorization: Bearer $LITELLM_MASTER_KEY" \
+              http://127.0.0.1:4000/v1/models >/dev/null 2>&1; then exit 0; fi
+            sleep 2
+          done
+          echo "::error::Local LiteLLM gateway did not start. No paid inference was initiated."
+          exit 1
+
+      - name: Start Splee backend and apply its real SQL migrations
+        working-directory: splee-upstream/backend
+        run: |
+          if [ "$RUN_MODE" = research ]; then
+            export ANTHROPIC_BASE_URL=http://127.0.0.1:4000
+            export ANTHROPIC_AUTH_TOKEN="$LITELLM_MASTER_KEY"
+            unset ANTHROPIC_API_KEY || true
+          fi
+          ./target/debug/splee > "$RUNNER_TEMP/splee-server.log" 2>&1 &
+          echo "$!" > "$RUNNER_TEMP/splee-server.pid"
+          for n in $(seq 1 70); do
+            if curl -fsS --max-time 2 http://127.0.0.1:8787/api/health >/dev/null 2>&1; then
+              echo "Splee API, migrations and ephemeral PostgreSQL are healthy"
+              exit 0
+            fi
+            if ! kill -0 "$(cat "$RUNNER_TEMP/splee-server.pid")" 2>/dev/null; then
+              echo "::error::Splee backend exited during startup; logs retained only on runner."
+              exit 1
+            fi
+            sleep 2
+          done
+          echo "::error::Splee backend health timeout; no logs or leads uploaded."
+          exit 1
+
+      - name: Run local QA (only manual research consumes AI credits)
+        id: qa
+        continue-on-error: true
+        run: |
+          python scripts/splee_actions_run.py \
+            --mode "$RUN_MODE" \
+            --domain "$DOMAIN" \
+            --max-seconds 420 \
+            --output artifacts/splee-actions-summary.json
+
+      - name: Publish sanitized QA summary
+        if: always()
+        run: |
+          {
+            echo '## Splee ephemeral Actions test'
+            echo ''
+            echo '- The actual pinned Rust server and migrations run in this GitHub runner only.'
+            echo '- PostgreSQL is deleted with the runner; no persistent server, Render bill or mailboxes.'
+            echo '- Sending and public agents were disabled; no outreach was authorized.'
+            echo '- Splee source stays AGPL-3.0; no upstream implementation was copied into Explee.'
+            echo '- Data-quality acceptance needs evidence review; a healthy API alone does not prove accurate leads.'
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ -f artifacts/splee-actions-summary.json ]; then
+            python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          q=json.load(open('artifacts/splee-actions-summary.json'))
+          print(f"- Mode: {q.get('mode')}")
+          print(f"- Outcome: {q.get('status')}")
+          print(f"- Last pipeline step: {q.get('last_step', 'n/a')}")
+          for stage,count in q.get('stage_counts',{}).items():
+              print(f"- {stage}: {count} results; {q['stage_states'][stage]}")
+          print(f"- Report flags: {sum(sum(f.values()) for f in q.get('quality_flags',{}).values())}")
+          PY
+          fi
+
+      - name: Upload aggregate-only QA artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: splee-ephemeral-summary-${{ github.run_id }}
+          path: artifacts/splee-actions-summary.json
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Stop local processes and remove temporary credentials
+        if: always()
+        run: |
+          for kind in splee-server splee-litellm; do
+            if [ -f "$RUNNER_TEMP/$kind.pid" ]; then
+              kill "$(cat "$RUNNER_TEMP/$kind.pid")" 2>/dev/null || true
+            fi
+          done
+          rm -f "$RUNNER_TEMP/splee-server.log" "$RUNNER_TEMP/splee-litellm.log"
+          echo "Temporary services stopped; the GitHub-hosted database is ephemeral."
+
+      - name: Enforce QA result
+        if: always()
+        env:
+          QA_OUTCOME: ${{ steps.qa.outcome }}
+        run: |
+          if [ "$QA_OUTCOME" != success ]; then
+            echo "::error::Ephemeral Splee QA did not pass. See aggregate summary; no lead-quality success is claimed."
+            exit 1
+          fi

@@ -1,0 +1,23 @@
+# Splee's Claude Agent SDK speaks Anthropic Messages; the local LiteLLM proxy
+# translates to the already-deployed Explee /openoutfind-ai/v1 proxy.
+# This does not guarantee Claude WebSearch/WebFetch compatibility.
+# NO new Lovable project key or separate Render server is required.
+model_list:
+  - model_name: claude-sonnet-5-5
+    litellm_params:
+      model: openai/openai/gpt-6-luna
+      api_base: os.environ/OPENOUTFIND_AI_API_BASE
+      api_key: os.environ/OPENOUTFIND_LLM_API_KEY
+      extra_headers:
+        x-explee-run-id: os.environ/EXPLEE_AI_RUN_ID
+      timeout: 45
+      max_retries: 0
+
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY
+  disable_spend_logs: true
+
+litellm_settings:
+  set_verbose: false
+  drop_params: false
+  request_timeout: 50
