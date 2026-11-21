@@ -1,0 +1,52 @@
+name: Splee LiteLLM Startup Diagnostics (No AI Calls)
+on:
+  push:
+    branches: ['feat/splee-gateway-diagnostics-20261120']
+    paths: ['.github/workflows/splee-gateway-diagnostics.yml']
+permissions:
+  contents: read
+jobs:
+  gateway:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    env:
+      OPENOUTFIND_LLM_API_KEY: sk-synthetic-placeholder-only
+      OPENOUTFIND_AI_API_BASE: https://example.com/no-requests/v1
+      EXPLEE_AI_RUN_ID: github-12345-1
+      LITELLM_MASTER_KEY: sk-diagnostic-no-real-access
+      LITELLM_USE_CHAT_COMPLETIONS_URL_FOR_ANTHROPIC_MESSAGES: 'true'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install exact bridge package, no inference credentials
+        run: python -m pip install --disable-pip-version-check -q 'litellm[proxy]==1.110.2'
+      - name: Diagnose readiness without making any model calls
+        run: |
+          litellm --config deploy/splee/actions/litellm.yaml --host 127.0.0.1 --port 4000 > "$RUNNER_TEMP/litellm-diag.log" 2>&1 &
+          p=$!
+          ready=0
+          for n in $(seq 1 24); do
+            if curl -fsS --max-time 2 -H "Authorization: Bearer $LITELLM_MASTER_KEY" http://127.0.0.1:4000/v1/models >/dev/null 2>&1; then ready=1; break; fi
+            if ! kill -0 "$p" 2>/dev/null; then break; fi
+            sleep 2
+          done
+          kill "$p" 2>/dev/null || true
+          python - <<'PY'
+          import os, pathlib, re
+          contents = pathlib.Path(os.environ["RUNNER_TEMP"],"litellm-diag.log").read_text(errors="replace")
+          secret = os.environ["LITELLM_MASTER_KEY"]
+          contents = contents.replace(secret,"[REDACTED]").replace(os.environ["OPENOUTFIND_LLM_API_KEY"],"[REDACTED]")
+          contents = re.sub(r"sk-[A-Za-z0-9_-]{12,}", "[REDACTED]",contents)
+          lines = contents.splitlines()
+          print("Gateway diagnostic last 60 lines (synthetic credentials only):")
+          for line in lines[-60:]: print(line[:700])
+          PY
+          if [ "$ready" != 1 ]; then
+            echo "::error::LiteLLM did not become ready with dummy credentials; see typed startup diagnostics."
+            exit 1
+          fi
+          echo "Gateway readiness test passed; zero model requests sent."
