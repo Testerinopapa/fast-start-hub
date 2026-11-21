@@ -77,6 +77,16 @@ def safe_cli_failure_category(stderr, stdout, payload):
     return "unknown_cli_failure"
 
 
+def safe_bridge_statuses():
+    try:
+        log=pathlib.Path(os.environ.get("RUNNER_TEMP","/nonexistent"))/"bridge-probe.log"
+        content=log.read_text(encoding="utf-8",errors="replace")
+        codes=re.findall(r'POST /v1/messages HTTP/1\\.1["\\s]+(\\d{3})', content)
+        return [int(code) for code in codes[-8:]]
+    except (OSError,ValueError):
+        return []
+
+
 def probe_claude_schema():
     """Isolate CLI-to-bridge schema handling; never persist raw prompts or answers."""
     env=os.environ.copy()
@@ -102,7 +112,10 @@ def probe_claude_schema():
                and structured.get("ok") is True and structured.get("stage")=="schema_probe_20261120")
         return {"status":"passed" if valid else "failed","exit_zero":done.returncode==0,
                 "structured_output_present":isinstance(structured,dict),
-                **({} if valid else {"failure_category":safe_cli_failure_category(done.stderr,done.stdout,payload)})}
+                **({} if valid else {"failure_category":safe_cli_failure_category(done.stderr,done.stdout,payload),
+                    "cli_subtype": (payload.get("subtype") if isinstance(payload,dict) and
+                        isinstance(payload.get("subtype"),str) and re.fullmatch(r"[a-z_]{1,48}",payload["subtype"]) else "unknown"),
+                    "bridge_http_statuses":safe_bridge_statuses()})}
     except subprocess.TimeoutExpired:
         return {"status":"timeout"}
     except (OSError,ValueError):
