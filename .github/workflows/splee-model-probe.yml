@@ -32,6 +32,7 @@ jobs:
           echo "::add-mask::$gateway_key"
           echo "LITELLM_MASTER_KEY=$gateway_key" >> "$GITHUB_ENV"
           python -m pip install --disable-pip-version-check -q 'litellm[proxy]==1.110.2'
+          npm install --global @anthropic-ai/claude-code@2.1.329
       - name: Start isolated Anthropic-compatible model bridge
         run: |
           env -u DATABASE_URL litellm --config deploy/splee/actions/litellm.yaml --host 127.0.0.1 --port 4000 > "$RUNNER_TEMP/bridge-probe.log" 2>&1 &
@@ -42,7 +43,7 @@ jobs:
           done
           echo "::error::Local LiteLLM gateway unavailable. No model calls made."
           exit 1
-      - name: Execute at most two small provider requests (one per protocol)
+      - name: Check gateway protocols plus Claude CLI JSON-schema output
         id: probe
         continue-on-error: true
         run: python scripts/splee_model_roundtrip.py
@@ -57,6 +58,7 @@ jobs:
           print('- Outcome: '+str(d.get('result')))
           for x in ('direct_openai','anthropic_via_litellm'):
               if x in d: print(f"- {x}: HTTP {d[x].get('status')}; code {d[x].get('error_code','none')}")
+          if "claude_cli_schema" in d: print("- CLI JSON-schema output: "+str(d["claude_cli_schema"].get("status")))
           print('- No prompts, model responses or personal data are uploaded.')
           PY
           fi
