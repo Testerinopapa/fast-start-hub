@@ -131,6 +131,21 @@ jobs:
             *) echo "::error::Configure a secure Explee OpenOutFind AI proxy base URL"; exit 1 ;;
           esac
 
+      - name: Preflight source evidence bridge without spending model credits
+        if: ${{ env.RUN_MODE == 'research' }}
+        run: |
+          code=$(curl --silent --show-error --max-time 15 -o /dev/null -w '%{http_code}' \
+            -X POST "${SPLEE_DIRECT_WEB_API_BASE%/}/web/search" \
+            -H "Authorization: Bearer $OPENOUTFIND_LLM_API_KEY" \
+            -H 'x-explee-run-id: invalid-preflight-id' \
+            -H 'Content-Type: application/json' \
+            --data '{"query":"public source preflight"}' || true)
+          if [ "$code" != '400' ]; then
+            echo "::error::Source-backed research endpoint is not deployed or does not accept the configured bearer key (status $code). No model calls were made."
+            exit 1
+          fi
+          echo 'Token-protected Context.dev evidence endpoint is available. No search was executed.'
+
       - name: Start Splee backend and apply its real SQL migrations
         working-directory: splee-upstream/backend
         run: |
