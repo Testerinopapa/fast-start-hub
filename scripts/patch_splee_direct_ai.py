@@ -104,7 +104,7 @@ async fn direct_gateway_once(state: &AppState, run: Option<&Ctx>, call: &Call, p
                 let web_response = http.post(format!("{}{}", base.trim_end_matches('/'), path))
                     .bearer_auth(&token)
                     .header("x-explee-run-id", &run_id)
-                    .json(&json!({field: value}))
+                    .json(&json!({(field): value}))
                     .send().await.context("direct AI evidence transport failed")?;
                 anyhow::ensure!(web_response.status().is_success(), "direct AI evidence HTTP {}", web_response.status().as_u16());
                 let evidence = web_response.bytes().await.context("direct AI evidence response failed")?;
