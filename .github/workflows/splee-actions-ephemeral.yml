@@ -130,12 +130,14 @@ jobs:
         run: |
           npm install --global @anthropic-ai/claude-code@2.1.329
           python -m pip install --disable-pip-version-check 'litellm[proxy]==1.110.2'
-          echo "LITELLM_MASTER_KEY=sk-$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          gateway_key="sk-$(openssl rand -hex 32)"
+          echo "::add-mask::$gateway_key"
+          echo "LITELLM_MASTER_KEY=$gateway_key" >> "$GITHUB_ENV"
 
       - name: Start local LiteLLM to existing capped Lovable AI proxy
         if: ${{ env.RUN_MODE == 'research' }}
         run: |
-          litellm --config deploy/splee/actions/litellm.yaml --host 127.0.0.1 --port 4000 \
+          env -u DATABASE_URL litellm --config deploy/splee/actions/litellm.yaml --host 127.0.0.1 --port 4000 \
             > "$RUNNER_TEMP/splee-litellm.log" 2>&1 &
           echo "$!" > "$RUNNER_TEMP/splee-litellm.pid"
           for n in $(seq 1 35); do
