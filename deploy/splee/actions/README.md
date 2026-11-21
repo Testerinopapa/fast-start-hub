@@ -61,3 +61,17 @@ For continuous uptime, Splee would still need an always-on host and database. **
 - **No prospects or email drafts:** not a pass. Output is reported as partial/incomplete, with `output_quality_verified=false`.
 
 Prior paid Render Blueprint: `exs-dc0dk8uc6qcc738j3pug` — **not approved, not deployed, and unnecessary for GitHub Actions QA**.
+
+
+## November 20 Calendly live investigation
+
+This integration **is not ready to produce verified Explee six-stage output**:
+
+- [Smoke run 44845214114](https://github.com/Testerinopapa/fast-start-hub/actions/runs/44845214114): successful real Rust build, migrations and API authentication.
+- [First real research attempt 44847874270](https://github.com/Testerinopapa/fast-start-hub/actions/runs/44847874270): LiteLLM never became ready. The workflow passed Splee's `DATABASE_URL` to LiteLLM, which has its own Prisma database startup path; the gateway must launch with that variable unset. The gateway env isolation fix is now in the workflow.
+- [Research attempt 44848776079](https://github.com/Testerinopapa/fast-start-hub/actions/runs/44848776079): LiteLLM started, but Splee's real six-stage agent **failed on step 1**. Its project profile stayed incomplete; campaigns, buyer companies, people, and email drafts all had zero records.
+- [Typed error research attempt 44849418615](https://github.com/Testerinopapa/fast-start-hub/actions/runs/44849418615): step 1 again failed, categorized as `ai_answer_unusable`. The raw agent error was not exported.
+- [Model protocol probe 44849610962](https://github.com/Testerinopapa/fast-start-hub/actions/runs/44849610962): a direct OpenAI-compatible Lovable AI request and a separate Anthropic-style request through LiteLLM both returned valid HTTP 200 responses. This proves basic model compatibility, **not** Splee's required structured-output and WebSearch/WebFetch behavior.
+
+**Do not interpret a healthy server, one-word model response, or synthetic fixture as proof that Splee creates good research.** Next implement/test the Claude Agent SDK structured-output format and web tools against this gateway, then perform human source verification on an actual six-stage output. No default model switching, retry loops, email sends or invented evidence should be introduced.
+
