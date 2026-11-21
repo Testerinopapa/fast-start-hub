@@ -5,6 +5,8 @@ import os
 import pathlib
 import re
 import sys
+import subprocess
+import tempfile
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError, URLError
 
@@ -43,7 +45,38 @@ def probe(url, payload, headers):
     if not re.fullmatch(r"[A-Za-z0-9_-]{1,64}",code):code="unclassified_error"
     return {"status":status,"error_code":code}
 
-report={"schema_version":"explee.splee.model-bridge-qa.v1","ai_requests_max":2,
+
+def probe_claude_schema():
+    """Isolate CLI-to-bridge schema handling; never persist raw prompts or answers."""
+    env=os.environ.copy()
+    env["ANTHROPIC_BASE_URL"]="http://127.0.0.1:4000"
+    env["ANTHROPIC_AUTH_TOKEN"]=MASTER
+    env.pop("ANTHROPIC_API_KEY",None)
+    env["CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC"]="1"
+    env["DISABLE_AUTOUPDATER"]="1"
+    schema={"type":"object","properties":{
+        "ok":{"type":"boolean"},"stage":{"type":"string"}},"required":["ok","stage"]}
+    cmd=["claude","-p","Return a JSON object with ok true and stage set to schema_probe_20261120.",
+         "--model","claude-sonnet-5-5","--output-format","json",
+         "--json-schema",json.dumps(schema,separators=(",",":")),
+         "--max-turns","1","--tools","","--setting-sources","","--no-session-persistence"]
+    try:
+        with tempfile.TemporaryDirectory(prefix="splee-cli-probe-") as cwd:
+            done=subprocess.run(cmd,env=env,cwd=cwd,stdin=subprocess.DEVNULL,
+                                stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,timeout=100)
+        try: payload=json.loads(done.stdout)
+        except (ValueError,TypeError): payload={}
+        structured=payload.get("structured_output") if isinstance(payload,dict) else None
+        valid=(done.returncode==0 and isinstance(structured,dict)
+               and structured.get("ok") is True and structured.get("stage")=="schema_probe_20261120")
+        return {"status":"passed" if valid else "failed","exit_zero":done.returncode==0,
+                "structured_output_present":isinstance(structured,dict)}
+    except subprocess.TimeoutExpired:
+        return {"status":"timeout"}
+    except (OSError,ValueError):
+        return {"status":"cli_unavailable"}
+
+report={"schema_version":"explee.splee.model-bridge-qa.v2","ai_requests_max":3,
         "sending_performed":False,"factual_quality_verified":False}
 try:
     if not TOKEN or not BASE.startswith("https://"):
@@ -63,7 +96,11 @@ try:
             },{"Authorization":"Bearer "+MASTER,"x-api-key":MASTER,
                "anthropic-version":"2023-06-01"})
             report["anthropic_via_litellm"]=via
-            report["result"]="passed" if via.get("status")==200 and via.get("response_shape_valid") else "bridge_failed"
+            if via.get("status")==200 and via.get("response_shape_valid"):
+                report["claude_cli_schema"]=probe_claude_schema()
+                report["result"]="passed" if report["claude_cli_schema"]["status"]=="passed" else "cli_schema_failed"
+            else:
+                report["result"]="bridge_failed"
         else:
             report["result"]="provider_failed_no_bridge_request"
 except Exception:
@@ -72,6 +109,6 @@ finally:
     OUTPUT.parent.mkdir(parents=True,exist_ok=True)
     OUTPUT.write_text(json.dumps(report,sort_keys=True,indent=2)+"\n")
     print("Splee model round-trip result:",report["result"])
-    for phase in ("direct_openai","anthropic_via_litellm"):
+    for phase in ("direct_openai","anthropic_via_litellm","claude_cli_schema"):
         if phase in report:print(phase,report[phase])
 sys.exit(0 if report.get("result")=="passed" else 1)
