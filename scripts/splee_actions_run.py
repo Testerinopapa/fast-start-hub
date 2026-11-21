@@ -92,6 +92,52 @@ def wait_for_run(opener, project_id, seconds):
     return "timed_out", 0
 
 
+
+def classify_agent_error(raw):
+    """Classify the ephemeral agent error without publishing provider responses."""
+    if not isinstance(raw, str) or not raw.strip():
+        return "agent_error_not_reported"
+    s = raw.lower()
+    if any(x in s for x in ("429", "rate limit", "quota", "insufficient credits", "budget exceeded")):
+        return "ai_rate_or_budget_limit"
+    if any(x in s for x in ("401", "403", "unauthorized", "authentication error", "invalid api key", "permission denied")):
+        return "ai_authentication_or_permission"
+    if any(x in s for x in ("model_not_found", "model not found", "unknown model", "unsupported model", "no deployments available")):
+        return "ai_model_configuration"
+    if any(x in s for x in ("websearch", "webfetch", "web_search", "tool_use", "tool call", "tool_choice", "unsupported tool")):
+        return "web_tool_protocol_incompatibility"
+    if any(x in s for x in ("json_schema", "structured_output", "structured output", "schema validation")):
+        return "structured_output_incompatibility"
+    if any(x in s for x in ("400", "bad request", "invalid request", "422")):
+        return "ai_request_rejected"
+    if any(x in s for x in ("500", "502", "503", "504", "server error", "internal server")):
+        return "ai_upstream_unavailable"
+    if "could not start the claude cli" in s:
+        return "claude_cli_start_failure"
+    if any(x in s for x in ("claude cli exited", "process exited", "subprocess exited")):
+        return "claude_cli_exited"
+    if "could not send the prompt" in s:
+        return "claude_cli_transport_failure"
+    if any(x in s for x in ("no usable answer", "no structured answer", "did not return a usable answer")):
+        return "ai_answer_unusable"
+    if any(x in s for x in ("timeout", "timed out", "did not finish")):
+        return "agent_timeout"
+    return "unclassified_agent_failure"
+
+
+def safe_agent_diagnostic(opener, project_id):
+    try:
+        runs = request_json(opener, "GET", "/api/projects/" + project_id + "/runs")
+        if not isinstance(runs, list):
+            return "agent_run_unavailable"
+        explore = next((r for r in runs if isinstance(r, dict) and r.get("kind") == "explore"), None)
+        if not explore:
+            return "agent_run_unavailable"
+        return classify_agent_error(explore.get("error"))
+    except SafeFailure:
+        return "agent_diagnostic_unavailable"
+
+
 def run(mode, domain, max_seconds):
     opener = build_opener(HTTPCookieProcessor(http.cookiejar.CookieJar()))
     health = request_json(opener, "GET", "/api/health")
@@ -119,6 +165,7 @@ def run(mode, domain, max_seconds):
     # POST /projects enqueues the *actual pinned Splee six-step explore agent*,
     # not a mock or a generated stand-in.
     status, step = wait_for_run(opener, project_id, max_seconds)
+    diagnostic = safe_agent_diagnostic(opener, project_id) if status != "succeeded" else None
     try:
         observed = live_snapshot(BASE, token, project_id)
         report = evaluate(observed, domain)
@@ -127,6 +174,7 @@ def run(mode, domain, max_seconds):
             "mode": "research", "status": status, "last_step": step,
             "sending_performed": False,
             "output_quality_verified": False,
+            **({"agent_error_category": diagnostic} if diagnostic else {}),
             "stage_counts": {name: v["inspected"] for name, v in stages.items()},
             "stage_states": {name: v["state"] for name, v in stages.items()},
             "quality_flags": {name: v["flags"] for name, v in stages.items()},
@@ -137,6 +185,7 @@ def run(mode, domain, max_seconds):
         summary = {
             "mode": "research", "status": status, "last_step": step,
             "sending_performed": False, "output_quality_verified": False,
+            **({"agent_error_category": diagnostic} if diagnostic else {}),
             "diagnostic": "read_only_quality_snapshot_unavailable",
         }
     return summary
