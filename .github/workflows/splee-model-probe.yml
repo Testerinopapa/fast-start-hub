@@ -56,7 +56,13 @@ jobs:
           print('- Outcome: '+str(d.get('result')))
           for x in ('direct_openai','anthropic_via_litellm'):
               if x in d: print(f"- {x}: HTTP {d[x].get('status')}; code {d[x].get('error_code','none')}")
-          if "claude_cli_schema" in d: print("- CLI JSON-schema output: "+str(d["claude_cli_schema"].get("status")))
+          if "claude_cli_schema" in d:
+              info=d["claude_cli_schema"]
+              print("- CLI JSON-schema output: "+str(info.get("status")))
+              print("- CLI error class: "+str(info.get("failure_category","none")))
+              print("- CLI result subtype: "+str(info.get("cli_subtype","none")))
+              print("- CLI turns: "+str(info.get("cli_turns","unknown")))
+              print("- Bridge HTTP codes: "+",".join(str(c) for c in info.get("bridge_http_statuses",[])))
           print('- No prompts, model responses or personal data are uploaded.')
           PY
           fi
