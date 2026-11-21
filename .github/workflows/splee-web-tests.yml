@@ -1,0 +1,30 @@
+name: Splee Evidence Gateway Unit Tests
+
+on:
+  push:
+    branches: ['qa/splee-direct-ai-20261120']
+    paths:
+      - '.github/workflows/splee-web-tests.yml'
+      - 'supabase/functions/splee-web/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deno:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Check Splee web function types
+        working-directory: supabase/functions
+        run: npx --yes deno@2.9.6 check splee-web/index.ts
+      - name: Run mocked source and security tests
+        working-directory: supabase/functions
+        run: npx --yes deno@2.9.6 test --allow-env splee-web/index_test.ts
+      - name: Test scope
+        if: always()
+        run: echo 'Mocked tests only. No Context.dev API calls, Lovable AI calls or emails.' >> "$GITHUB_STEP_SUMMARY"
