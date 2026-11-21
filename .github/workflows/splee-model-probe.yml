@@ -2,7 +2,7 @@ name: One-time Splee Model Protocol QA
 on:
   push:
     branches: ['qa/splee-model-probe-20261120']
-    paths: ['.github/workflows/splee-model-probe.yml']
+    paths: ['.github/workflows/splee-model-probe.yml', 'scripts/splee_model_roundtrip.py']
 permissions:
   contents: read
 jobs:
