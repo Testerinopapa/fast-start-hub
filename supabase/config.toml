@@ -28,3 +28,7 @@ verify_jwt = false
 # Supabase JWT verification must be disabled for OpenAI-compatible external clients.
 [functions.openoutfind-ai]
 verify_jwt = false
+
+# Read-only Context.dev evidence proxy. GitHub-issued bearer token is checked in handler.
+[functions.splee-web]
+verify_jwt = false
