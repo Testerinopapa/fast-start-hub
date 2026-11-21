@@ -46,6 +46,37 @@ def probe(url, payload, headers):
     return {"status":status,"error_code":code}
 
 
+
+def safe_cli_failure_category(stderr, stdout, payload):
+    """Publish only enum labels, never untrusted raw CLI/provider text."""
+    source=(str(stderr)+"\\n"+str(stdout)).lower()
+    if any(v in source for v in ("unknown option","unknown argument","unrecognized option","invalid option")):
+        return "cli_unsupported_argument"
+    if any(v in source for v in ("401","unauthorized","authentication failed","invalid api key")):
+        return "authentication_failure"
+    if any(v in source for v in ("403","permission denied","access denied")):
+        return "permission_failure"
+    if any(v in source for v in ("409","duplicate")):
+        return "duplicate_request_rejected"
+    if any(v in source for v in ("429","rate limit","quota")):
+        return "rate_or_budget_rejected"
+    if any(v in source for v in ("400","bad request","invalid_request","schema validation failed")):
+        return "provider_request_rejected"
+    if any(v in source for v in ("503","502","500","upstream error")):
+        return "upstream_provider_failure"
+    if any(v in source for v in ("json_schema","structured output","structured_output")):
+        return "structured_output_unavailable"
+    if any(v in source for v in ("not logged in","login required","please run /login")):
+        return "cli_login_required"
+    if any(v in source for v in ("network error","connection refused","connection reset","fetch failed")):
+        return "cli_network_failure"
+    if isinstance(payload,dict) and payload.get("is_error") is True:
+        return "cli_result_error"
+    if isinstance(payload,dict) and payload.get("subtype")=="error_max_turns":
+        return "max_turns_before_answer"
+    return "unknown_cli_failure"
+
+
 def probe_claude_schema():
     """Isolate CLI-to-bridge schema handling; never persist raw prompts or answers."""
     env=os.environ.copy()
@@ -70,7 +101,8 @@ def probe_claude_schema():
         valid=(done.returncode==0 and isinstance(structured,dict)
                and structured.get("ok") is True and structured.get("stage")=="schema_probe_20261120")
         return {"status":"passed" if valid else "failed","exit_zero":done.returncode==0,
-                "structured_output_present":isinstance(structured,dict)}
+                "structured_output_present":isinstance(structured,dict),
+                **({} if valid else {"failure_category":safe_cli_failure_category(done.stderr,done.stdout,payload)})}
     except subprocess.TimeoutExpired:
         return {"status":"timeout"}
     except (OSError,ValueError):
