@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Two bounded live protocol probes: JSON schema and function-call shape; no web execution or sending."""
+"""Two bounded live JSON-schema probes for output and query planning; no web execution or sending."""
 import json
 import os
 import sys
@@ -50,29 +50,27 @@ def run():
         raw = message["content"]
         obj = json.loads(raw) if isinstance(raw, str) else raw
         if isinstance(obj, dict) and obj.get("ok") is True and obj.get("stage") == "transport":
-            return tool_probe(base, token, run_id)
+            return plan_probe(base, token, run_id)
         return "json_schema_value_mismatch"
     except (ValueError, KeyError, IndexError, TypeError):
         return "json_schema_response_shape_failure"
 
-def tool_probe(base, token, run_id):
-    """Check real OpenAI function-call shape without executing any web tools."""
+def plan_probe(base, token, run_id):
+    """Verify structured search planning without tool-call translation."""
+    schema = {"type": "object", "properties": {
+        "queries": {"type": "array", "minItems": 1, "maxItems": 1,
+                    "items": {"type": "string", "minLength": 3, "maxLength": 200}}
+    }, "required": ["queries"]}
     body = {
         "model": "openai/gpt-6-luna",
         "messages": [
-            {"role": "system", "content": "Call WebSearch once; don't invent results."},
-            {"role": "user", "content": "Use the WebSearch tool to find public evidence about scheduling software."}
+            {"role": "system", "content": "Return one public web search query as a JSON array field 'queries'. Do not invent findings."},
+            {"role": "user", "content": "Plan a public search for the scheduling product calendly.com."}
         ],
-        "tools": [{"type": "function", "function": {
-            "name": "WebSearch",
-            "description": "Search for public source URLs",
-            "parameters": {"type": "object", "properties": {
-                "query": {"type": "string"}
-            }, "required": ["query"]}
-        }}],
-        "tool_choice": "required",
-        "response_format": {"type": "json_object"},
-        "max_completion_tokens": 1024,
+        "response_format": {"type": "json_schema", "json_schema": {
+            "name": "splee_research_queries", "schema": schema
+        }},
+        "max_completion_tokens": 512,
         "stream": False
     }
     req = Request(base + "/chat/completions", method="POST",
@@ -83,17 +81,16 @@ def tool_probe(base, token, run_id):
     try:
         with urlopen(req, timeout=60) as response:
             payload = json.load(response)
-        calls = payload["choices"][0]["message"]["tool_calls"]
-        if isinstance(calls, list) and calls and calls[0]["function"]["name"] == "WebSearch":
-            args = json.loads(calls[0]["function"]["arguments"])
-            return "pass" if isinstance(args.get("query"), str) and args["query"].strip() else "invalid_tool_arguments"
-        return "missing_tool_call"
+        queries = json.loads(payload["choices"][0]["message"]["content"])["queries"]
+        if isinstance(queries, list) and len(queries) == 1 and isinstance(queries[0], str):
+            return "pass" if 3 <= len(queries[0]) <= 200 else "invalid_search_query_length"
+        return "invalid_query_plan"
     except HTTPError as error:
-        return "tool_gateway_http_" + str(error.code)
+        return "planner_gateway_http_" + str(error.code)
     except (URLError, TimeoutError, OSError):
-        return "tool_gateway_unreachable"
+        return "planner_gateway_unreachable"
     except (ValueError, KeyError, IndexError, TypeError):
-        return "invalid_tool_call_shape"
+        return "invalid_query_plan_shape"
 
 
 if __name__ == "__main__":
