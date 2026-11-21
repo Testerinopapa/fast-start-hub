@@ -1,11 +1,6 @@
 name: Splee Direct AI Schema Planning Probe
 
 on:
-  push:
-    branches: ['qa/splee-direct-ai-20261120']
-    paths:
-      - '.github/workflows/splee-direct-schema-probe.yml'
-      - 'scripts/splee_direct_schema_probe.py'
   workflow_dispatch:
 
 permissions:
