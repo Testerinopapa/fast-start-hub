@@ -1,11 +1,6 @@
 name: Splee Direct AI Overlay Compile
 
 on:
-  push:
-    branches: ['qa/splee-direct-ai-20261120']
-    paths:
-      - '.github/workflows/splee-direct-build.yml'
-      - 'scripts/patch_splee_direct_ai.py'
   workflow_dispatch:
 
 permissions:
