@@ -27,7 +27,7 @@ permissions:
 
 concurrency:
   group: splee-ephemeral-${{ github.ref }}-${{ github.event_name }}
-  cancel-in-progress: false
+  cancel-in-progress: ${{ github.event_name == 'push' }}
 
 jobs:
   temporary-splee:
@@ -150,8 +150,9 @@ jobs:
         working-directory: splee-upstream/backend
         run: |
           if [ "$RUN_MODE" = research ]; then
-            echo "ANTHROPIC_BASE_URL=http://127.0.0.1:4000" >> "$GITHUB_ENV"
-            echo "ANTHROPIC_AUTH_TOKEN=$LITELLM_MASTER_KEY" >> "$GITHUB_ENV"
+            export ANTHROPIC_BASE_URL=http://127.0.0.1:4000
+            export ANTHROPIC_AUTH_TOKEN="$LITELLM_MASTER_KEY"
+            unset ANTHROPIC_API_KEY || true
           fi
           ./target/debug/splee > "$RUNNER_TEMP/splee-server.log" 2>&1 &
           echo "$!" > "$RUNNER_TEMP/splee-server.pid"
