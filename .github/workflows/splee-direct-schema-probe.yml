@@ -1,10 +1,11 @@
-name: Splee Direct AI JSON Schema Probe
+name: Splee Direct AI Protocol Probe
 
 on:
   push:
     branches: ['qa/splee-direct-ai-20261120']
     paths:
       - '.github/workflows/splee-direct-schema-probe.yml'
+      - 'scripts/splee_direct_schema_probe.py'
   workflow_dispatch:
 
 permissions:
@@ -25,8 +26,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Check real direct JSON-schema output (one request only)
+      - name: Check real direct JSON-schema and tool-call output (two requests only)
         run: python scripts/splee_direct_schema_probe.py
       - name: No research or email sending was performed
         if: always()
-        run: echo 'One direct model request only, no outbound messaging, no prospect data and no raw model answers in logs.' >> "$GITHUB_STEP_SUMMARY"
+        run: echo 'Two direct protocol requests only, no outbound messaging, no prospect data and no raw model answers in logs.' >> "$GITHUB_STEP_SUMMARY"
