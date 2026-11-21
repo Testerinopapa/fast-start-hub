@@ -58,7 +58,7 @@ try:
         if direct.get("status")==200 and direct.get("response_shape_valid"):
             via=probe("http://127.0.0.1:4000/v1/messages",{
                 "model":"claude-sonnet-5-5",
-                "messages":[{"role":"user","content":"Respond with exactly the word OK."}],
+                "messages":[{"role":"user","content":"Respond with exactly the word READY."}],
                 "max_tokens":48,"stream":False
             },{"Authorization":"Bearer "+MASTER,"x-api-key":MASTER,
                "anthropic-version":"2023-06-01"})
