@@ -81,7 +81,7 @@ def safe_bridge_statuses():
     try:
         log=pathlib.Path(os.environ.get("RUNNER_TEMP","/nonexistent"))/"bridge-probe.log"
         content=log.read_text(encoding="utf-8",errors="replace")
-        codes=re.findall(r'POST /v1/messages HTTP/1\\.1["\\s]+(\\d{3})', content)
+        codes=re.findall(r'POST /v1/messages HTTP/1\.1"\s+(\d{3})', content)
         return [int(code) for code in codes[-8:]]
     except (OSError,ValueError):
         return []
@@ -115,7 +115,9 @@ def probe_claude_schema():
                 **({} if valid else {"failure_category":safe_cli_failure_category(done.stderr,done.stdout,payload),
                     "cli_subtype": (payload.get("subtype") if isinstance(payload,dict) and
                         isinstance(payload.get("subtype"),str) and re.fullmatch(r"[a-z_]{1,48}",payload["subtype"]) else "unknown"),
-                    "bridge_http_statuses":safe_bridge_statuses()})}
+                    "bridge_http_statuses":safe_bridge_statuses(),
+                    "cli_turns": (payload.get("num_turns") if isinstance(payload,dict) and
+                        isinstance(payload.get("num_turns"),int) and 0<=payload["num_turns"]<=30 else None)})}
     except subprocess.TimeoutExpired:
         return {"status":"timeout"}
     except (OSError,ValueError):
