@@ -1,0 +1,32 @@
+name: Splee Direct AI JSON Schema Probe
+
+on:
+  push:
+    branches: ['qa/splee-direct-ai-20261120']
+    paths:
+      - '.github/workflows/splee-direct-schema-probe.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  direct-schema:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      OPENOUTFIND_LLM_API_KEY: ${{ secrets.OPENOUTFIND_LLM_API_KEY }}
+      OPENOUTFIND_AI_API_BASE: ${{ vars.OPENOUTFIND_AI_API_BASE || 'https://emlggkmtbosahpzrxaul.supabase.co/functions/v1/openoutfind-ai/v1' }}
+      EXPLEE_AI_RUN_ID: github-${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Check real direct JSON-schema output (one request only)
+        run: python scripts/splee_direct_schema_probe.py
+      - name: No research or email sending was performed
+        if: always()
+        run: echo 'One direct model request only, no outbound messaging, no prospect data and no raw model answers in logs.' >> "$GITHUB_STEP_SUMMARY"
