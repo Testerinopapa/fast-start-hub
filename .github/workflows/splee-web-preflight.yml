@@ -1,10 +1,6 @@
 name: Splee Evidence Gateway Deployment Preflight
 
 on:
-  push:
-    branches: ['qa/splee-direct-ai-20261120']
-    paths:
-      - '.github/workflows/splee-web-preflight.yml'
   workflow_dispatch:
 
 permissions:
