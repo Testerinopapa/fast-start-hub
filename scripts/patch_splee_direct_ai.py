@@ -32,12 +32,20 @@ async fn direct_gateway_once(state: &AppState, run: Option<&Ctx>, call: &Call, p
     anyhow::ensure!(run_id.starts_with("github-"), "invalid direct AI run ID");
     anyhow::ensure!(call.servers.is_empty() && call.server_tools.is_empty() && call.directory.is_none() && call.places.is_none(),
         "direct AI transport has no connected MCP tool adapter for this call");
-    if call.web {
+    let web_base = if call.web {
         anyhow::ensure!(
             std::env::var("SPLEE_DIRECT_WEB_BACKEND").as_deref() == Ok("explee-context"),
             "direct AI evidence backend not enabled; refusing ungrounded web research"
         );
-    }
+        let source = std::env::var("SPLEE_DIRECT_WEB_API_BASE").context("direct AI evidence endpoint missing")?;
+        let parsed = reqwest::Url::parse(&source).context("invalid direct AI evidence endpoint")?;
+        anyhow::ensure!(
+            parsed.scheme() == "https" && parsed.host_str() == url.host_str()
+                && parsed.path().ends_with("/v1") && parsed.query().is_none() && parsed.fragment().is_none(),
+            "direct AI evidence endpoint must use the same trusted Supabase host"
+        );
+        source
+    } else { String::new() };
     let http = reqwest::Client::builder()
         .timeout(call.timeout)
         .redirect(reqwest::redirect::Policy::none())
@@ -70,6 +78,7 @@ async fn direct_gateway_once(state: &AppState, run: Option<&Ctx>, call: &Call, p
                 {"type":"function","function":{"name":"WebFetch","description":"Read a specific HTTPS public website page for evidence; URL required.","parameters":{"type":"object","properties":{"url":{"type":"string"}},"required":["url"]}}}
             ]);
             body["tool_choice"] = json!(if evidence_calls == 0 { "required" } else { "auto" });
+            body["response_format"] = json!({"type":"json_object"});
         }
         let response = http.post(format!("{}/chat/completions", base.trim_end_matches('/')))
             .bearer_auth(&token)
@@ -101,7 +110,7 @@ async fn direct_gateway_once(state: &AppState, run: Option<&Ctx>, call: &Call, p
                 if let Some(ctx) = run {
                     report_tool(state, ctx, name, input.clone()).await;
                 }
-                let web_response = http.post(format!("{}{}", base.trim_end_matches('/'), path))
+                let web_response = http.post(format!("{}{}", web_base.trim_end_matches('/'), path))
                     .bearer_auth(&token)
                     .header("x-explee-run-id", &run_id)
                     .json(&json!({(field): value}))
